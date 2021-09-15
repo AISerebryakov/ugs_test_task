@@ -1,7 +1,7 @@
 package models
 
 type Building struct {
-	id string
-	address string
-	location string
+	Id string
+	Address string
+	Location string
 }

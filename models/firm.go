@@ -1,9 +1,9 @@
 package models
 
 type Firm struct {
-	id string
-	name string
-	buildingId string
-	phoneNumbers []string
-	categories []string
+	Id string
+	Name string
+	BuildingId string
+	PhoneNumbers []string
+	Categories []string
 }
