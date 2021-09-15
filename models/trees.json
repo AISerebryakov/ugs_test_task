@@ -1,0 +1,14 @@
+{
+    "name": "Food",
+    "items": [
+        {
+            "name": "Meat",
+            "items": [
+                {"name": "Sosiski", "items": null}
+            ]
+        },
+        {
+
+        }
+    ]
+}
