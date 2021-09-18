@@ -1,7 +1,7 @@
 package models
 
 type Category struct {
-	id string
-	parentId string
-	name string
+	Id       string
+	Name     string
+	CreateAt int64
 }

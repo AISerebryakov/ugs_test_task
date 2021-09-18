@@ -3,16 +3,18 @@ package http
 import "net/http"
 
 type handler struct {
-	*Api
+	Api
 }
 
 type Api struct {
-	server *http.Server
-	conf   Config
+	server  *http.Server
+	conf    Config
+	firmMng FirmManager
 }
 
 func NewApi(conf Config) (api Api) {
-
+	api.conf = conf
+	api.firmMng = conf.FirmManager
 	return api
 }
 
@@ -23,7 +25,7 @@ func (api *Api) startServer() error {
 	conf := api.conf
 	api.server = &http.Server{
 		Addr:              conf.Address(),
-		Handler:           handler{api},
+		Handler:           handler{*api},
 		TLSConfig:         nil,
 		ReadTimeout:       0,
 		ReadHeaderTimeout: 0,
@@ -45,7 +47,7 @@ func (api *Api) startServer() error {
 
 func (h handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
-	case "/api/v1/firm":
+	case firmPath:
 		h.firmHandlers(rw, req)
 	}
 }
