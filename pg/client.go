@@ -17,3 +17,10 @@ func Connect(ctx context.Context, conf Config) (c Client, err error) {
 	}
 	return c, nil
 }
+
+func (c Client) Close() {
+	if c.Pool == nil {
+		return
+	}
+	c.Pool.Close()
+}

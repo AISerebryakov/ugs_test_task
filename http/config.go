@@ -1,26 +1,27 @@
 package http
 
 import (
-	"errors"
-	"ugc_test_task/firmmng"
+	"fmt"
+	"ugc_test_task/companymng"
+	"ugc_test_task/config"
 	"ugc_test_task/models"
 )
 
-type FirmManager interface {
-	GetFirms(query firmmng.GetQuery, clb func(firm models.Company) error)
+type CompanyManager interface {
+	GetCompanies(query companymng.GetQuery, clb func(firm models.Company) error) error
 }
 
 type Config struct {
-	Host        string
-	Port        string
-	MetricsPort string
-	DebugPort   string
-	//ReadTimeout        config.Duration `yaml:"read_timeout"`
-	//WriteTimeout       config.Duration `yaml:"write_timeout"`
-	//IdleTimeout        config.Duration `yaml:"idle_timeout"`
-	//MaxConnsPerIP      int             `yaml:"max_conns_per_ip"`
-	//MaxRequestBodySize config.Bytes    `yaml:"max_request_body_size"`
-	FirmManager FirmManager
+	Host              string
+	Port              string
+	MetricsPort       string
+	DebugPort         string
+	ReadTimeout       config.Duration
+	ReadHeaderTimeout config.Duration
+	WriteTimeout      config.Duration
+	IdleTimeout       config.Duration
+	MaxHeaderBytes    config.Bytes
+	CompanyManager    CompanyManager
 }
 
 func (conf Config) Address() string {
@@ -35,7 +36,13 @@ func (conf Config) DebugAddress() string {
 	return conf.Host + ":" + conf.DebugPort
 }
 
-// Validate todo: implement
 func (conf Config) Validate() error {
-	return errors.New("not implement")
+	if len(conf.Host) == 0 {
+		return fmt.Errorf("'host' is empty")
+	}
+	if len(conf.Port) == 0 {
+		return fmt.Errorf("'port' is empty")
+	}
+
+	return nil
 }

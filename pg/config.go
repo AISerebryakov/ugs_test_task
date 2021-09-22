@@ -1,6 +1,9 @@
 package pg
 
-import "net/url"
+import (
+	"fmt"
+	"net/url"
+)
 
 type Config struct {
 	Host     string
@@ -18,4 +21,23 @@ func (c Config) String() string {
 		Path:   c.Database,
 	}
 	return pgUrl.String()
+}
+
+func (c Config) Validate() error {
+	if len(c.Host) == 0 {
+		return fmt.Errorf("host is empty")
+	}
+	if len(c.Port) == 0 {
+		return fmt.Errorf("port is empty")
+	}
+	if len(c.Database) == 0 {
+		return fmt.Errorf("database is empty")
+	}
+	if len(c.User) == 0 {
+		return fmt.Errorf("user is empty")
+	}
+	if len(c.Password) == 0 {
+		return fmt.Errorf("password is empty")
+	}
+	return nil
 }

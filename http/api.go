@@ -1,21 +1,34 @@
 package http
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+	"ugc_test_task/logger"
+)
 
 type handler struct {
 	Api
 }
 
 type Api struct {
-	server  *http.Server
-	conf    Config
-	firmMng FirmManager
+	server     *http.Server
+	conf       Config
+	companyMng CompanyManager
 }
 
-func NewApi(conf Config) (api Api) {
+func NewApi(conf Config) (api Api, _ error) {
+	if err := conf.Validate(); err != nil {
+		return Api{}, fmt.Errorf("config is invalid: %v", err)
+	}
 	api.conf = conf
-	api.firmMng = conf.FirmManager
-	return api
+	api.companyMng = conf.CompanyManager
+	return api, nil
+}
+
+func (api Api) Start(f func(error)) {
+	if err := api.startServer(); err != nil {
+		f(fmt.Errorf("start http server: %v", err))
+	}
 }
 
 //todo: add metrics server
@@ -26,18 +39,13 @@ func (api *Api) startServer() error {
 	api.server = &http.Server{
 		Addr:              conf.Address(),
 		Handler:           handler{*api},
-		TLSConfig:         nil,
-		ReadTimeout:       0,
-		ReadHeaderTimeout: 0,
-		WriteTimeout:      0,
-		IdleTimeout:       0,
-		MaxHeaderBytes:    0,
-		TLSNextProto:      nil,
-		ConnState:         nil,
-		ErrorLog:          nil,
-		BaseContext:       nil,
-		ConnContext:       nil,
+		ReadTimeout:       conf.ReadTimeout.TimeDuration(),
+		ReadHeaderTimeout: conf.ReadHeaderTimeout.TimeDuration(),
+		WriteTimeout:      conf.WriteTimeout.TimeDuration(),
+		IdleTimeout:       conf.IdleTimeout.TimeDuration(),
+		MaxHeaderBytes:    conf.MaxHeaderBytes.Int(),
 	}
+	logger.Msg("start http server").Info(conf.Address())
 	if err := api.server.ListenAndServe(); err != nil {
 		//todo: handle error
 		return err
@@ -46,8 +54,9 @@ func (api *Api) startServer() error {
 }
 
 func (h handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	fmt.Println(req.URL.Path)
 	switch req.URL.Path {
-	case firmPath:
-		h.firmHandlers(rw, req)
+	case companiesPath:
+		h.companyHandlers(rw, req)
 	}
 }

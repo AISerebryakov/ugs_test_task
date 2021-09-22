@@ -5,3 +5,9 @@ type Category struct {
 	Name     string
 	CreateAt int64
 }
+
+func (c *Category) Reset() {
+	c.Id = ""
+	c.Name = ""
+	c.CreateAt = 0
+}
