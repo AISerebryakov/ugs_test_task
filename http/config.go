@@ -4,12 +4,18 @@ import (
 	"fmt"
 	"ugc_test_task/companymng"
 	"ugc_test_task/config"
+	buildmng "ugc_test_task/managers/buildings"
 	"ugc_test_task/models"
 )
 
 type CompanyManager interface {
 	GetCompanies(query companymng.GetQuery, clb func(firm models.Company) error) error
 	AddCompany(query companymng.AddQuery) (models.Company, error)
+}
+
+type BuildingManager interface {
+	GetBuildings(query buildmng.GetQuery, callback func(models.Building) error) error
+	AddBuilding(query buildmng.AddQuery) (models.Building, error)
 }
 
 type Config struct {
@@ -23,6 +29,7 @@ type Config struct {
 	IdleTimeout       config.Duration
 	MaxHeaderBytes    config.Bytes
 	CompanyManager    CompanyManager
+	BuildingManager   BuildingManager
 }
 
 func (conf Config) Address() string {

@@ -19,9 +19,10 @@ type handler struct {
 }
 
 type Api struct {
-	server     *http.Server
-	conf       Config
-	companyMng CompanyManager
+	server      *http.Server
+	conf        Config
+	companyMng  CompanyManager
+	buildingMng BuildingManager
 }
 
 func NewApi(conf Config) (api Api, _ error) {
@@ -30,6 +31,7 @@ func NewApi(conf Config) (api Api, _ error) {
 	}
 	api.conf = conf
 	api.companyMng = conf.CompanyManager
+	api.buildingMng = conf.BuildingManager
 	return api, nil
 }
 
@@ -69,6 +71,8 @@ func (h handler) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 	switch req.Path() {
 	case companiesPath:
 		h.companyHandlers(res, req)
+	case buildingsPath:
+		h.buildingHandlers(res, req)
 	}
 	if !res.err.IsEmpty() {
 		logger.TraceId(req.Id()).Error(res.Error().OriginError().Error())

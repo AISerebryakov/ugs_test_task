@@ -13,15 +13,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandler_GetFirms(t *testing.T) {
+func TestHandler_GetCompanies(t *testing.T) {
 	ctrl := minimock.NewController(t)
-	firmMng := NewFirmManagerMock(ctrl).GetFirmsMock.Inspect(func(query companymng.GetQuery, clb func(firm models.Company) error) {
+	companyMng := NewCompanyManagerMock(ctrl).
+		GetCompaniesMock.Inspect(func(query companymng.GetQuery, clb func(firm models.Company) error) {
 		t.Log("Query: ", query)
 		clb(models.Company{Name: "Test firm 34"})
 
-	}).Return()
+	}).Return(nil).
+		AddCompanyMock.Expect(companymng.AddQuery{}).Return(models.Company{}, nil)
 
-	api := NewApi(Config{CompanyManager: firmMng})
+	api, err := NewApi(Config{CompanyManager: companyMng})
+	assert.NoError(t, err)
 
 	srv := httptest.NewServer(handler{api})
 	defer srv.Close()
