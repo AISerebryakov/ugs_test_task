@@ -5,7 +5,12 @@ import (
 	"fmt"
 	"time"
 	"ugc_test_task/companyrepos"
+	"ugc_test_task/managers"
 	"ugc_test_task/models"
+)
+
+const (
+	opTimeout = 5 * time.Second
 )
 
 type Manager struct {
@@ -24,9 +29,26 @@ func New(conf Config) (m Manager, _ error) {
 
 //todo: normalize of phone numbers
 
+func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
+	if err := query.Validate(); err != nil {
+		return models.Company{}, fmt.Errorf("%w: %v", managers.ErrQueryInvalid, err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
+	defer cancel()
+	comp := models.NewCompany()
+	comp.Name = query.Name
+	comp.BuildingId = query.BuildingId
+	comp.Address = query.Address
+	comp.PhoneNumbers = query.PhoneNumbers
+	comp.Categories = query.Categories
+	if err := m.companyRepos.InsertCompany(ctx, comp); err != nil {
+		return models.Company{}, fmt.Errorf("%w: %v", managers.ErrSaveToDb, err)
+	}
+	return comp, nil
+}
+
 func (m Manager) GetCompanies(query GetQuery, callback func(firm models.Company) error) error {
-	//todo: timeout to const
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
 	reposQuery := m.companyRepos.Select(ctx)
 	if len(query.Id) > 0 {
@@ -39,7 +61,6 @@ func (m Manager) GetCompanies(query GetQuery, callback func(firm models.Company)
 		//todo: prepare category
 		reposQuery = reposQuery.ForCategories(nil)
 	}
-	fmt.Println("Query: ", reposQuery.String())
 	err := reposQuery.Iter(func(company models.Company) error {
 		if err := callback(company); err != nil {
 			//todo: handle error

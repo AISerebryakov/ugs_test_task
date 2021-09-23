@@ -7,6 +7,7 @@ import (
 	"ugc_test_task/categoryrepos"
 	"ugc_test_task/models"
 	"ugc_test_task/pg"
+	buildrepos "ugc_test_task/repositories/buildings"
 
 	"github.com/jackc/pgx/v4"
 
@@ -71,7 +72,7 @@ func (r Repository) createCompaniesTable() error {
 		Define(models.IdKey, "uuid", "primary key", "not null").
 		Define(models.NameKey, "varchar(200)", "not null").
 		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).
-		Define(models.BuildingIdKey, "uuid", "not null").
+		Define(models.BuildingIdKey, "uuid", "references "+buildrepos.BuildingsTableName, "not null").
 		Define(models.AddressKey, "varchar(200)", "not null").
 		Define(models.PhoneNumbersKey, "varchar(20)[]").String()
 	_, err := r.client.Exec(context.Background(), s)

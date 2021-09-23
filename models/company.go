@@ -1,5 +1,11 @@
 package models
 
+import (
+	"ugc_test_task/common"
+
+	"github.com/google/uuid"
+)
+
 type Company struct {
 	Id           string   `json:"id"`
 	Name         string   `json:"name"`
@@ -8,6 +14,13 @@ type Company struct {
 	Address      string   `json:"address"`
 	PhoneNumbers []string `json:"phone_numbers"`
 	Categories   []string `json:"categories"`
+}
+
+func NewCompany() Company {
+	return Company{
+		Id:       uuid.NewString(),
+		CreateAt: common.NewTimestamp(),
+	}
 }
 
 func (comp *Company) Reset() {

@@ -68,12 +68,11 @@ func (h handler) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 
 	switch req.Path() {
 	case companiesPath:
-		h.companyHandlers(&res, req)
+		h.companyHandlers(res, req)
 	}
 	if !res.err.IsEmpty() {
-		logger.Error(res.err.msg)
+		logger.TraceId(req.Id()).Error(res.Error().OriginError().Error())
 	}
-	fmt.Println("JSON API: ", string(res.data))
 	res.writeHeaders()
 	res.WriteBody()
 }

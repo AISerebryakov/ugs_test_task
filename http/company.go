@@ -2,6 +2,8 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"ugc_test_task/companymng"
@@ -16,15 +18,15 @@ const (
 
 func (api Api) companyHandlers(res *Response, req Request) {
 	switch req.Method {
-	//case http.MethodPost:
-	//	api.addCompany(rw, req)
+	case http.MethodPost:
+		api.addCompany(res, req)
 	case http.MethodGet:
 		api.getCompanies(res, req)
 	}
 }
 
 func (api Api) getCompanies(res *Response, req Request) {
-	query := getCompaniesQuery(req)
+	query := newGetCompaniesQuery(req)
 	companies := make([]models.Company, 0)
 	objectCounter := 0
 	err := api.companyMng.GetCompanies(query, func(company models.Company) error {
@@ -51,13 +53,32 @@ func (api Api) getCompanies(res *Response, req Request) {
 	}
 }
 
-func (api Api) addCompany(rw http.ResponseWriter, req *http.Request) {
-	rw.WriteHeader(http.StatusOK)
-	rw.Write([]byte("Add firms"))
+func (api Api) addCompany(res *Response, req Request) {
+	query, err := newAddCompanyQuery(req)
+	if err != nil {
+		//todo: handle error
+		//todo: add details to error
+		res.SetError(NewApiError(err))
+		return
+	}
+	comp, err := api.companyMng.AddCompany(query)
+	if err != nil {
+		res.SetError(NewApiError(err))
+		return
+	}
+	jsonData, err := json.Marshal(comp)
+	if err != nil {
+		apiErr := NewEncodingJsonError("error on encoding companies to json")
+		logger.TraceId(req.Id()).AddMsg(apiErr.msg).Error(err.Error())
+		res.SetError(apiErr)
+		return
+	}
+	res.SetData(jsonData)
 }
 
-func getCompaniesQuery(req Request) (query companymng.GetQuery) {
+func newGetCompaniesQuery(req Request) (query companymng.GetQuery) {
 	urlQuery := req.URL.Query()
+	query.ReqId = req.Id()
 	query.Id = urlQuery.Get(models.IdKey)
 	query.BuildingId = urlQuery.Get(models.BuildingIdKey)
 	query.Categories = urlQuery.Get(models.CategoriesKey)
@@ -65,4 +86,20 @@ func getCompaniesQuery(req Request) (query companymng.GetQuery) {
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
 	query.Limit, _ = strconv.Atoi(urlQuery.Get(managers.ToDateKey))
 	return query
+}
+
+func newAddCompanyQuery(req Request) (companymng.AddQuery, error) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return companymng.AddQuery{}, fmt.Errorf("%w: %v", ErrBodyReading, err)
+	}
+	if len(body) == 0 {
+		return companymng.AddQuery{}, ErrBodyIsEmpty
+	}
+	query, err := companymng.NewAddQueryFromJson(body)
+	if err != nil {
+		return companymng.AddQuery{}, err
+	}
+	query.ReqId = req.Id()
+	return query, nil
 }

@@ -709,6 +709,13 @@ github.com/subosito/gotenv
 github.com/tdakkota/asciicheck
 # github.com/tetafro/godot v1.4.7
 github.com/tetafro/godot
+# github.com/tidwall/gjson v1.9.1
+## explicit
+github.com/tidwall/gjson
+# github.com/tidwall/match v1.0.3
+github.com/tidwall/match
+# github.com/tidwall/pretty v1.2.0
+github.com/tidwall/pretty
 # github.com/timakin/bodyclose v0.0.0-20200424151742-cb6215831a94
 github.com/timakin/bodyclose/passes/bodyclose
 # github.com/tomarrell/wrapcheck/v2 v2.1.0

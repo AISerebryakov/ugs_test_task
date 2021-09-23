@@ -1,11 +1,9 @@
 package companymng
 
 type GetQuery struct {
-	//High priority.
-	Id string
-	//Middle priority. Using after Id field.
+	ReqId      string
+	Id         string
 	BuildingId string
-	//Low priority. Using after Id and BuildingId fields.
 	Categories string
 	FromDate   int64
 	ToDate     int64

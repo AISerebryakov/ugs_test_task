@@ -9,6 +9,7 @@ import (
 
 type CompanyManager interface {
 	GetCompanies(query companymng.GetQuery, clb func(firm models.Company) error) error
+	AddCompany(query companymng.AddQuery) (models.Company, error)
 }
 
 type Config struct {

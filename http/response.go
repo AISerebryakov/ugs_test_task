@@ -24,8 +24,8 @@ type Response struct {
 	warn       Warning
 }
 
-func NewResponse(rw http.ResponseWriter, reqId string) Response {
-	return Response{
+func NewResponse(rw http.ResponseWriter, reqId string) *Response {
+	return &Response{
 		rw:         rw,
 		reqId:      reqId,
 		statusCode: http.StatusOK,
@@ -56,26 +56,21 @@ func (res *Response) SetWarning(warn Warning) {
 	res.warn = warn
 }
 
-func (res *Response) WriteBody() {
+func (res Response) Error() Error {
+	return res.err
+}
 
+func (res *Response) WriteBody() {
 	enc := gojay.BorrowEncoder(res.rw)
 	defer enc.Release()
 	err := enc.EncodeObject(res)
 
-	//data, err := json.Marshal(res)
 	if err != nil {
 		logger.TraceId(res.reqId).AddMsg("error while marshaling body to json").Error(err.Error())
 		res.rw.WriteHeader(http.StatusInternalServerError)
 		res.rw.Write(encodeResponseErrorJson)
 		return
 	}
-	//_, err = res.rw.Write(data)
-	//if err != nil {
-	//	logger.TraceId(res.reqId).AddMsg("error while write body to response").Error(err.Error())
-	//	res.rw.WriteHeader(http.StatusInternalServerError)
-	//	res.rw.Write(writeResponseErrorJson)
-	//	return
-	//}
 }
 
 func (res *Response) writeHeaders() {
