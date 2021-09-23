@@ -48,7 +48,7 @@ func New(conf Config) (r Repository, err error) {
 	return r, nil
 }
 
-func (r Repository) Init() error {
+func (r Repository) InitTables() error {
 	if err := r.createCompaniesTable(); err != nil {
 		return fmt.Errorf("create '%s' table: %v", CompaniesTableName, err)
 	}
@@ -72,7 +72,7 @@ func (r Repository) createCompaniesTable() error {
 		Define(models.IdKey, "uuid", "primary key", "not null").
 		Define(models.NameKey, "varchar(200)", "not null").
 		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).
-		Define(models.BuildingIdKey, "uuid", "references "+buildrepos.BuildingsTableName, "not null").
+		Define(models.BuildingIdKey, "uuid", "references "+buildrepos.TableName, "not null").
 		Define(models.AddressKey, "varchar(200)", "not null").
 		Define(models.PhoneNumbersKey, "varchar(20)[]").String()
 	_, err := r.client.Exec(context.Background(), s)
@@ -94,19 +94,19 @@ func (r Repository) createCompaniesFullView() error {
 	return nil
 }
 
-func (r Repository) InsertCompany(ctx context.Context, comp models.Company) error {
+func (r Repository) Insert(ctx context.Context, comp models.Company) error {
 	if len(comp.Categories) > 0 {
-		if err := r.insertCompanyWithCategories(ctx, comp); err != nil {
+		if err := r.insertWithCategories(ctx, comp); err != nil {
 			return err
 		}
 		return nil
 	}
-	return r.insertCompany(ctx, nil, comp)
+	return r.insert(ctx, nil, comp)
 }
 
-func (r Repository) insertCompanyWithCategories(ctx context.Context, comp models.Company) error {
+func (r Repository) insertWithCategories(ctx context.Context, comp models.Company) error {
 	err := r.client.BeginFunc(ctx, func(tx pgx.Tx) error {
-		if err := r.insertCompany(ctx, tx, comp); err != nil {
+		if err := r.insert(ctx, tx, comp); err != nil {
 			return err
 		}
 		b := sql.InsertInto(CategoryCompaniesTableName).Cols(categoryCompanyFields...)
@@ -134,7 +134,7 @@ func (r Repository) insertCompanyWithCategories(ctx context.Context, comp models
 	return nil
 }
 
-func (r Repository) insertCompany(ctx context.Context, tx pgx.Tx, comp models.Company) error {
+func (r Repository) insert(ctx context.Context, tx pgx.Tx, comp models.Company) error {
 	sqlStr, args := sql.InsertInto(CompaniesTableName).Cols(companyFields...).
 		Values(comp.Id, comp.Name, comp.CreateAt, comp.BuildingId, comp.Address, comp.PhoneNumbers).BuildWithFlavor(sql.PostgreSQL)
 	if tx != nil {

@@ -10,6 +10,7 @@ import (
 	"ugc_test_task/http"
 	"ugc_test_task/logger"
 	"ugc_test_task/pg"
+	buildrepos "ugc_test_task/repositories/buildings"
 )
 
 var (
@@ -17,6 +18,7 @@ var (
 
 	categoryRepos categoryrepos.Repository
 	companyRepos  companyrepos.Repository
+	buildingRepos buildrepos.Repository
 
 	companyMng companymng.Manager
 )
@@ -79,10 +81,12 @@ func initRepositories() (err error) {
 		User:     conf.Pg.User,
 		Password: conf.Pg.Password,
 	}
+
 	categoryRepos, err = categoryrepos.New(categoryrepos.NewConfig(pgConfig))
 	if err != nil {
 		return fmt.Errorf("init category repository: %v", err)
 	}
+
 	companyConf := companyrepos.NewConfig(pgConfig)
 	companyConf.CategoryRepos = categoryRepos
 	companyRepos, err = companyrepos.New(companyConf)
@@ -90,6 +94,10 @@ func initRepositories() (err error) {
 		return fmt.Errorf("init company repository: %v", err)
 	}
 
+	buildingRepos, err = buildrepos.New(buildrepos.NewConfig(pgConfig))
+	if err != nil {
+		return fmt.Errorf("init building repository: %v", err)
+	}
 	return nil
 }
 

@@ -12,7 +12,7 @@ import (
 //}
 //
 //type CompanyRepository interface {
-//	InsertCompany(context.Context, models.Company) error
+//	Insert(context.Context, models.Company) error
 //	Select(context.Context) CompanySelectQuery
 //}
 

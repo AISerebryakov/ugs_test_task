@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
+	"ugc_test_task/common"
 	"ugc_test_task/models"
 
 	"github.com/google/uuid"
@@ -19,19 +19,18 @@ func TestRepository_InsertCompany(t *testing.T) {
 	repos.Stop()
 
 	comp := models.Company{
-		Id:   uuid.NewString(),
-		Name: "Test_Firm",
-		//todo: time
-		CreateAt:     time.Now().UnixNano() / 1e6,
+		Id:           uuid.NewString(),
+		Name:         "Test_Firm",
+		CreateAt:     common.NewTimestamp(),
 		BuildingId:   uuid.NewString(),
 		Address:      "Test address 2",
 		PhoneNumbers: []string{"+76472834883"},
 		Categories:   []string{"Level_11.Level_21.Level_31", "Level_11.Level_21.Level_32"},
 	}
-	err = repos.InsertCompany(context.Background(), comp)
+	err = repos.Insert(context.Background(), comp)
 	assert.NoError(t, err, "Insert comp to repository")
 
-	savedComp, found, err := repos.FetchCompanyById(context.Background(), comp.Id)
+	savedComp, found, err := repos.Select(context.Background()).ById(comp.Id).One()
 	assert.NoError(t, err, "Fetch comp from repository")
 	assert.Equal(t, true, found, "Company not found")
 	assert.Equal(t, comp, savedComp)
@@ -45,24 +44,23 @@ func TestRepository_FetchCompaniesForCategories(t *testing.T) {
 	assert.NoError(t, err, "Get repository")
 
 	newComp := models.Company{
-		Id:   uuid.NewString(),
-		Name: "Test_Firm",
-		//todo: time
-		CreateAt:     time.Now().UnixNano() / 1e6,
+		Id:           uuid.NewString(),
+		Name:         "Test_Firm",
+		CreateAt:     common.NewTimestamp(),
 		BuildingId:   uuid.NewString(),
 		Address:      "Test address",
 		PhoneNumbers: []string{"+76456734235"},
 		Categories:   []string{"Top.Transport.Moto", "Top.Transport.Cars"},
 	}
-	err = repos.InsertCompany(context.Background(), newComp)
+	err = repos.Insert(context.Background(), newComp)
 	assert.NoError(t, err, "Insert comp to repository")
 
 	found := false
-	err = repos.FetchCompaniesForCategories(context.Background(), newComp.Categories, func(comp models.Company) error {
-		t.Log(comp)
-		if comp.Id == newComp.Id {
+	err = repos.Select(context.Background()).ForCategories(newComp.Categories).Iter(func(company models.Company) error {
+		t.Log(company)
+		if company.Id == newComp.Id {
 			found = true
-			assert.Equal(t, newComp, comp)
+			assert.Equal(t, newComp, company)
 		}
 		return nil
 	})

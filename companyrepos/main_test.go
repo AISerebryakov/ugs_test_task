@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"sync"
+	"ugc_test_task/pg"
 )
 
 const (
@@ -33,25 +34,27 @@ func initTestRepository() (repos Repository, err error) {
 	if err != nil {
 		return Repository{}, fmt.Errorf("create repository: %v", err)
 	}
-	if err = repos.Init(); err != nil {
+	if err = repos.InitTables(); err != nil {
 		return Repository{}, err
 	}
 	return repos, nil
 }
 
-func parseFlagsToTestConfig() (conf Config) {
+func parseFlagsToTestConfig() Config {
 	host := flag.String(dbHostFlag, "localhost", "Host of db for testing repository.")
 	port := flag.String(dbPortFlag, "5432", "Port of db for testing repository.")
 	db := flag.String(dbNameFlag, "postgres", "Name of db for testing repository.")
 	user := flag.String(dbUserFlag, "postgres", "User for access to db for testing repository.")
 	pass := flag.String(dbPasswordFlag, "", "Password for access to db for testing repository.")
 	flag.Parse()
-	conf.Host = *host
-	conf.Port = *port
-	conf.Database = *db
-	conf.User = *user
-	conf.Password = *pass
-	return conf
+	pgConf := pg.Config{
+		Host:     *host,
+		Port:     *port,
+		Database: *db,
+		User:     *user,
+		Password: *pass,
+	}
+	return NewConfig(pgConf)
 }
 
 //func TestMain(m *testing.M) {

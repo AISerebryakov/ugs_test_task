@@ -41,7 +41,7 @@ func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
 	comp.Address = query.Address
 	comp.PhoneNumbers = query.PhoneNumbers
 	comp.Categories = query.Categories
-	if err := m.companyRepos.InsertCompany(ctx, comp); err != nil {
+	if err := m.companyRepos.Insert(ctx, comp); err != nil {
 		return models.Company{}, fmt.Errorf("%w: %v", managers.ErrSaveToDb, err)
 	}
 	return comp, nil

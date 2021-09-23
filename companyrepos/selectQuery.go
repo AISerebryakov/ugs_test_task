@@ -2,9 +2,12 @@ package companyrepos
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"ugc_test_task/models"
 	"ugc_test_task/pg"
+
+	"github.com/jackc/pgx/v4"
 
 	sql "github.com/huandu/go-sqlbuilder"
 )
@@ -71,22 +74,41 @@ func (query *SelectQuery) ForCategories(categories []string) *SelectQuery {
 	return query
 }
 
-// FromDate todo: implement
 func (query *SelectQuery) FromDate(date int64) *SelectQuery {
-	panic("Implement!")
+	query.fromDate = date
 	return query
 }
 
-// ToDate todo: implement
 func (query *SelectQuery) ToDate(date int64) *SelectQuery {
-	panic("Implement!")
+	query.toDate = date
 	return query
 }
 
-// Limit todo: implement
-func (query *SelectQuery) Limit(limit int64) *SelectQuery {
-	panic("Implement!")
+func (query *SelectQuery) Limit(limit int) *SelectQuery {
+	query.limit = limit
 	return query
+}
+
+func (query *SelectQuery) One() (models.Company, bool, error) {
+	if query.err != nil {
+		return models.Company{}, false, query.err
+	}
+	query.Limit(1)
+	sqlStr, args, err := query.build()
+	//todo: handle error
+	if err != nil {
+		return models.Company{}, false, err
+	}
+	row := query.client.QueryRow(query.ctx, sqlStr, args...)
+	if err = row.Scan(); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Company{}, false, nil
+		}
+		//todo: handle error
+		return models.Company{}, false, err
+	}
+
+	return models.Company{}, true, nil
 }
 
 func (query *SelectQuery) Iter(callback func(models.Company) error) error {
@@ -138,6 +160,15 @@ func (query SelectQuery) build() (string, []interface{}, error) {
 	if len(query.buildingId) != 0 {
 		b = b.Where(b.Equal(models.BuildingIdKey, query.buildingId))
 	}
+	if query.fromDate > 0 {
+		b = b.Where(b.GE(models.CreateAt, query.fromDate))
+	}
+	if query.toDate > 0 {
+		b = b.Where(b.LE(models.CreateAt, query.toDate))
+	}
+	if query.limit > 0 {
+		b = b.Limit(query.limit)
+	}
 	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
 	return sqlStr, args, nil
 }
@@ -148,6 +179,15 @@ func (query SelectQuery) buildForCategories() (string, []interface{}, error) {
 	if len(categoriesArgs) == 0 {
 		query.err = fmt.Errorf("'%s' is empty", models.CategoriesKey)
 		return "", nil, query.err
+	}
+	if query.fromDate > 0 {
+		b = b.Where(b.GE(models.CreateAt, query.fromDate))
+	}
+	if query.toDate > 0 {
+		b = b.Where(b.LE(models.CreateAt, query.toDate))
+	}
+	if query.limit > 0 {
+		b = b.Limit(query.limit)
 	}
 	sqlStr, args := b.Where(CategoryNameKey+" @ "+b.Args.Add(categoriesArgs)).
 		Join(CompaniesTableName, CompaniesTableName+"."+models.IdKey+"="+CategoryCompaniesTableName+"."+CompanyIdKey).
