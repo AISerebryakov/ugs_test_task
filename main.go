@@ -9,6 +9,7 @@ import (
 	"ugc_test_task/config"
 	"ugc_test_task/http"
 	"ugc_test_task/logger"
+	buildmng "ugc_test_task/managers/buildings"
 	"ugc_test_task/pg"
 	buildrepos "ugc_test_task/repositories/buildings"
 )
@@ -20,7 +21,8 @@ var (
 	companyRepos  companyrepos.Repository
 	buildingRepos buildrepos.Repository
 
-	companyMng companymng.Manager
+	companyMng  companymng.Manager
+	buildingMng buildmng.Manager
 )
 
 func main() {
@@ -107,6 +109,13 @@ func initManagers() (err error) {
 	})
 	if err != nil {
 		return fmt.Errorf("error while creating company manager: %v", err)
+	}
+
+	buildingMng, err = buildmng.New(buildmng.Config{
+		BuildingRepos: buildingRepos,
+	})
+	if err != nil {
+		return fmt.Errorf("error while creating building manager: %v", err)
 	}
 	return nil
 }

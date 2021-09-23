@@ -23,7 +23,7 @@ func New(conf Config) (m Manager, _ error) {
 		return Manager{}, fmt.Errorf("config is invalid: %v", err)
 	}
 	m.conf = conf
-	m.buildRepos = conf.BuildRepos
+	m.buildRepos = conf.BuildingRepos
 	return m, nil
 }
 

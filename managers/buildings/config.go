@@ -5,7 +5,7 @@ import (
 )
 
 type Config struct {
-	BuildRepos buildrepos.Repository
+	BuildingRepos buildrepos.Repository
 }
 
 // Validate todo: implement
