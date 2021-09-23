@@ -210,6 +210,9 @@ github.com/fatih/color
 github.com/fatih/structtag
 # github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 github.com/form3tech-oss/jwt-go
+# github.com/francoispqt/gojay v1.2.13
+## explicit
+github.com/francoispqt/gojay
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/fzipp/gocyclo v0.3.1

@@ -6,6 +6,14 @@ import (
 	"ugc_test_task/logger"
 )
 
+const (
+	RequestIdKey       = "X-Request-Id"
+	ApplicationJsonKey = "application/json"
+	ContentTypeKey     = "Content-Type"
+
+	maxGettingObjects = 200
+)
+
 type handler struct {
 	Api
 }
@@ -53,10 +61,19 @@ func (api *Api) startServer() error {
 	return nil
 }
 
-func (h handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	fmt.Println(req.URL.Path)
-	switch req.URL.Path {
+func (h handler) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
+	req := NewRequest(httpReq)
+	res := NewResponse(rw, req.Id())
+	fmt.Println(req.Path())
+
+	switch req.Path() {
 	case companiesPath:
-		h.companyHandlers(rw, req)
+		h.companyHandlers(&res, req)
 	}
+	if !res.err.IsEmpty() {
+		logger.Error(res.err.msg)
+	}
+	fmt.Println("JSON API: ", string(res.data))
+	res.writeHeaders()
+	res.WriteBody()
 }

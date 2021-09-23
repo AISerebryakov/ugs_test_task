@@ -35,7 +35,7 @@ func (m Manager) GetCompanies(query GetQuery, callback func(firm models.Company)
 	if len(query.BuildingId) > 0 && len(query.Id) == 0 {
 		reposQuery = reposQuery.ByBuildingId(query.BuildingId)
 	}
-	if len(query.Category) > 0 && len(query.BuildingId) == 0 && len(query.Id) == 0 {
+	if len(query.Categories) > 0 && len(query.BuildingId) == 0 && len(query.Id) == 0 {
 		//todo: prepare category
 		reposQuery = reposQuery.ForCategories(nil)
 	}

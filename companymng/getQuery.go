@@ -6,10 +6,10 @@ type GetQuery struct {
 	//Middle priority. Using after Id field.
 	BuildingId string
 	//Low priority. Using after Id and BuildingId fields.
-	Category string
-	DateFrom int64
-	DateTo   int64
-	Limit    int
+	Categories string
+	FromDate   int64
+	ToDate     int64
+	Limit      int
 }
 
 // IsEmpty todo: implement

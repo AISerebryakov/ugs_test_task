@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/dustin/go-humanize v1.0.0
+	github.com/francoispqt/gojay v1.2.13
 	github.com/gojuno/minimock/v3 v3.0.9
 	github.com/google/uuid v1.3.0
 	github.com/huandu/go-sqlbuilder v1.13.0

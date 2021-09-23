@@ -1,9 +1,12 @@
 package http
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"ugc_test_task/companymng"
+	"ugc_test_task/logger"
+	"ugc_test_task/managers"
 	"ugc_test_task/models"
 )
 
@@ -11,38 +14,55 @@ const (
 	companiesPath = "/v1/companies"
 )
 
-func (api Api) companyHandlers(rw http.ResponseWriter, req *http.Request) {
+func (api Api) companyHandlers(res *Response, req Request) {
 	switch req.Method {
-	case http.MethodPost:
-		api.addCompany(rw, req)
+	//case http.MethodPost:
+	//	api.addCompany(rw, req)
 	case http.MethodGet:
-		api.getCompanies(rw, req)
+		api.getCompanies(res, req)
 	}
 }
 
-func (api Api) getCompanies(rw http.ResponseWriter, req *http.Request) {
-	ids := req.URL.Query()[models.IdKey]
-	id := ""
-	if len(ids) > 0 {
-		id = ids[0]
-	}
-	fmt.Println("Id: ", id)
-	query := companymng.GetQuery{Id: id}
+func (api Api) getCompanies(res *Response, req Request) {
+	query := getCompaniesQuery(req)
+	companies := make([]models.Company, 0)
+	objectCounter := 0
 	err := api.companyMng.GetCompanies(query, func(company models.Company) error {
-		fmt.Println("Company: ", company)
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(company.Name))
+		objectCounter++
+		companies = append(companies, company)
 		return nil
 	})
 	if err != nil {
-		rw.WriteHeader(http.StatusInternalServerError)
-		rw.Write([]byte(err.Error()))
 		//todo: handle error
+		//todo: add details to error
+		res.SetError(NewApiError(err))
+		return
 	}
-	//todo: check limit
+	jsonData, err := json.Marshal(companies)
+	if err != nil {
+		apiErr := NewEncodingJsonError("error on encoding companies to json")
+		logger.TraceId(req.Id()).AddMsg(apiErr.msg).Error(err.Error())
+		res.SetError(apiErr)
+		return
+	}
+	res.SetData(jsonData)
+	if objectCounter >= maxGettingObjects {
+		res.SetWarning(NewLimitExceededWarning())
+	}
 }
 
 func (api Api) addCompany(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte("Add firms"))
+}
+
+func getCompaniesQuery(req Request) (query companymng.GetQuery) {
+	urlQuery := req.URL.Query()
+	query.Id = urlQuery.Get(models.IdKey)
+	query.BuildingId = urlQuery.Get(models.BuildingIdKey)
+	query.Categories = urlQuery.Get(models.CategoriesKey)
+	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
+	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
+	query.Limit, _ = strconv.Atoi(urlQuery.Get(managers.ToDateKey))
+	return query
 }
