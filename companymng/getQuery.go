@@ -9,9 +9,3 @@ type GetQuery struct {
 	ToDate     int64
 	Limit      int
 }
-
-// IsEmpty todo: implement
-func (query GetQuery) IsEmpty() bool {
-	panic("Not implement!")
-	return true
-}

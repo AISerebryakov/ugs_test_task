@@ -50,15 +50,15 @@ func (r Repository) createTable() error {
 	return nil
 }
 
-func (r Repository) Insert(ctx context.Context, building models.Building) (models.Building, error) {
+func (r Repository) Insert(ctx context.Context, building models.Building) error {
 	//todo: handle error
 	if err := building.Validate(); err != nil {
-		return models.Building{}, err
+		return err
 	}
 	sqlStr, args := sql.InsertInto(TableName).Cols(buildingsFields...).
 		Values(building.Id, building.CreateAt, building.Address, building.Location.ToJson()).BuildWithFlavor(sql.PostgreSQL)
 	if _, err := r.client.Exec(ctx, sqlStr, args...); err != nil {
-		return models.Building{}, err
+		return err
 	}
-	return building, nil
+	return nil
 }

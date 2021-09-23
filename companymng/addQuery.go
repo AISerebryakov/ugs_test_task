@@ -23,7 +23,6 @@ func NewAddQueryFromJson(data []byte) (query AddQuery, _ error) {
 	return query, nil
 }
 
-//Validate todo: implement
 func (query AddQuery) Validate() error {
 	if len(query.Name) == 0 {
 		return fmt.Errorf("'%s' is empty", models.NameKey)

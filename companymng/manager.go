@@ -47,13 +47,10 @@ func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
 	return comp, nil
 }
 
-func (m Manager) GetCompanies(query GetQuery, callback func(firm models.Company) error) error {
+func (m Manager) GetCompanies(query GetQuery, callback func(models.Company) error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
-	reposQuery := m.companyRepos.Select(ctx)
-	if len(query.Id) > 0 {
-		reposQuery = reposQuery.ById(query.Id)
-	}
+	reposQuery := m.companyRepos.Select(ctx).ById(query.Id)
 	if len(query.BuildingId) > 0 && len(query.Id) == 0 {
 		reposQuery = reposQuery.ByBuildingId(query.BuildingId)
 	}
@@ -61,9 +58,12 @@ func (m Manager) GetCompanies(query GetQuery, callback func(firm models.Company)
 		//todo: prepare category
 		reposQuery = reposQuery.ForCategories(nil)
 	}
+
+	reposQuery = reposQuery.FromDate(query.FromDate).
+		ToDate(query.ToDate).
+		Limit(query.Limit)
 	err := reposQuery.Iter(func(company models.Company) error {
 		if err := callback(company); err != nil {
-			//todo: handle error
 			return err
 		}
 		return nil
