@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"ugc_test_task/categoryrepos"
 	"ugc_test_task/models"
 	"ugc_test_task/pg"
 	buildrepos "ugc_test_task/repositories/buildings"
+	"ugc_test_task/repositories/categories"
 
 	"github.com/jackc/pgx/v4"
 
@@ -34,7 +34,7 @@ var (
 
 type Repository struct {
 	client        pg.Client
-	categoryRepos categoryrepos.Repository
+	categoryRepos categories.Repository
 }
 
 func New(conf Config) (r Repository, err error) {

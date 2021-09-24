@@ -1,4 +1,4 @@
-package categoryrepos
+package categories
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//todo: add args
 func TestRepository_SelectQuery(t *testing.T) {
 	var testCases = []struct {
 		name      string

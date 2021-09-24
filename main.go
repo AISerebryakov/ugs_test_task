@@ -3,26 +3,28 @@ package main
 import (
 	"fmt"
 	"os"
-	"ugc_test_task/categoryrepos"
 	"ugc_test_task/companymng"
 	"ugc_test_task/companyrepos"
 	"ugc_test_task/config"
 	"ugc_test_task/http"
 	"ugc_test_task/logger"
 	buildmng "ugc_test_task/managers/buildings"
+	categmng "ugc_test_task/managers/categories"
 	"ugc_test_task/pg"
 	buildrepos "ugc_test_task/repositories/buildings"
+	categrepos "ugc_test_task/repositories/categories"
 )
 
 var (
 	conf config.Config
 
-	categoryRepos categoryrepos.Repository
+	categoryRepos categrepos.Repository
 	companyRepos  companyrepos.Repository
 	buildingRepos buildrepos.Repository
 
 	companyMng  companymng.Manager
 	buildingMng buildmng.Manager
+	categoryMng categmng.Manager
 )
 
 func main() {
@@ -55,6 +57,8 @@ func main() {
 		IdleTimeout:       conf.HttpServer.IdleTimeout,
 		MaxHeaderBytes:    conf.HttpServer.MaxHeaderBytes,
 		CompanyManager:    companyMng,
+		BuildingManager:   buildingMng,
+		CategoryManager:   categoryMng,
 	})
 	if err != nil {
 		logger.Msg("error while creating http api").Error(err.Error())
@@ -84,7 +88,7 @@ func initRepositories() (err error) {
 		Password: conf.Pg.Password,
 	}
 
-	categoryRepos, err = categoryrepos.New(categoryrepos.NewConfig(pgConfig))
+	categoryRepos, err = categrepos.New(categrepos.NewConfig(pgConfig))
 	if err != nil {
 		return fmt.Errorf("init category repository: %v", err)
 	}
@@ -116,6 +120,13 @@ func initManagers() (err error) {
 	})
 	if err != nil {
 		return fmt.Errorf("error while creating building manager: %v", err)
+	}
+
+	categoryMng, err = categmng.New(categmng.Config{
+		CategoryRepos: categoryRepos,
+	})
+	if err != nil {
+		return fmt.Errorf("error while creating category manager: %v", err)
 	}
 	return nil
 }

@@ -1,13 +1,13 @@
 package companyrepos
 
 import (
-	"ugc_test_task/categoryrepos"
 	"ugc_test_task/pg"
+	"ugc_test_task/repositories/categories"
 )
 
 type Config struct {
 	pgConfig      pg.Config
-	CategoryRepos categoryrepos.Repository
+	CategoryRepos categories.Repository
 }
 
 func NewConfig(pgConfig pg.Config) Config {

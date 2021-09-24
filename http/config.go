@@ -5,6 +5,7 @@ import (
 	"ugc_test_task/companymng"
 	"ugc_test_task/config"
 	buildmng "ugc_test_task/managers/buildings"
+	categmng "ugc_test_task/managers/categories"
 	"ugc_test_task/models"
 )
 
@@ -16,6 +17,11 @@ type CompanyManager interface {
 type BuildingManager interface {
 	GetBuildings(query buildmng.GetQuery, callback func(models.Building) error) error
 	AddBuilding(query buildmng.AddQuery) (models.Building, error)
+}
+
+type CategoryManager interface {
+	AddCategory(query categmng.AddQuery) (models.Category, error)
+	GetCategories(query categmng.GetQuery, callback func(models.Category) error) error
 }
 
 type Config struct {
@@ -30,6 +36,7 @@ type Config struct {
 	MaxHeaderBytes    config.Bytes
 	CompanyManager    CompanyManager
 	BuildingManager   BuildingManager
+	CategoryManager   CategoryManager
 }
 
 func (conf Config) Address() string {

@@ -1,4 +1,4 @@
-package categoryrepos
+package categories
 
 import "ugc_test_task/pg"
 

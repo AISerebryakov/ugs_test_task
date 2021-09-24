@@ -1,7 +1,8 @@
-package categoryrepos
+package categories
 
 import (
 	"context"
+	"fmt"
 	"ugc_test_task/models"
 	"ugc_test_task/pg"
 
@@ -9,10 +10,15 @@ import (
 )
 
 type SelectQuery struct {
-	ctx    context.Context
-	client pg.Client
-	id     string
-	names  []string
+	ctx        context.Context
+	err        error
+	client     pg.Client
+	id         string
+	names      []string
+	searchName string
+	limit      int
+	fromDate   int64
+	toDate     int64
 }
 
 func (r Repository) Select(ctx context.Context) *SelectQuery {
@@ -40,6 +46,7 @@ func (query *SelectQuery) ByName(name string) *SelectQuery {
 	if len(name) == 0 {
 		return query
 	}
+	query.searchName = ""
 	query.names = query.names[:0]
 	query.names = append(query.names, name)
 	return query
@@ -49,8 +56,33 @@ func (query *SelectQuery) ByNames(names []string) *SelectQuery {
 	if len(names) == 0 {
 		return query
 	}
+	query.searchName = ""
 	query.names = query.names[:0]
 	query.names = append(query.names, names...)
+	return query
+}
+
+func (query *SelectQuery) SearchByName(name string) *SelectQuery {
+	if len(name) == 0 {
+		return query
+	}
+	query.names = query.names[:0]
+	query.searchName = name
+	return query
+}
+
+func (query *SelectQuery) FromDate(date int64) *SelectQuery {
+	query.fromDate = date
+	return query
+}
+
+func (query *SelectQuery) ToDate(date int64) *SelectQuery {
+	query.toDate = date
+	return query
+}
+
+func (query *SelectQuery) Limit(limit int) *SelectQuery {
+	query.limit = limit
 	return query
 }
 
@@ -86,7 +118,7 @@ func (query SelectQuery) String() string {
 }
 
 func (query SelectQuery) build() (string, []interface{}) {
-	b := sql.Select(categoryFields...).From(CategoriesTableName)
+	b := sql.Select(categoryFields...).From(TableName)
 	if len(query.id) != 0 {
 		b = b.Where(b.Equal(models.IdKey, query.id))
 	}
@@ -105,4 +137,25 @@ func (query SelectQuery) build() (string, []interface{}) {
 		b = b.Where(in)
 	}
 	return b.BuildWithFlavor(sql.PostgreSQL)
+}
+
+func (query SelectQuery) buildSearchName() (string, []interface{}, error) {
+	b := sql.Select(categoryFields...).From(TableName)
+	nameArgs := PrepareSearchByName(query.searchName)
+	if len(nameArgs) == 0 {
+		query.err = fmt.Errorf("'%s' is empty", models.CategoriesKey)
+		return "", nil, query.err
+	}
+	b = b.Where(models.NameKey + " @ " + b.Args.Add(nameArgs))
+	if query.fromDate > 0 {
+		b = b.Where(b.GE(models.CreateAt, query.fromDate))
+	}
+	if query.toDate > 0 {
+		b = b.Where(b.LE(models.CreateAt, query.toDate))
+	}
+	if query.limit > 0 {
+		b = b.Limit(query.limit)
+	}
+	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
+	return sqlStr, args, nil
 }

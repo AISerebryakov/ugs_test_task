@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"ugc_test_task/models"
 	"ugc_test_task/pg"
+	categrepos "ugc_test_task/repositories/categories"
 
 	"github.com/jackc/pgx/v4"
 
@@ -173,9 +174,10 @@ func (query SelectQuery) build() (string, []interface{}, error) {
 	return sqlStr, args, nil
 }
 
+//todo: add search by category name
 func (query SelectQuery) buildForCategories() (string, []interface{}, error) {
 	b := sql.Select(companyFullFieldQuery...).From(CategoryCompaniesTableName)
-	categoriesArgs := categoriesToLtreeArgs(query.categories)
+	categoriesArgs := categrepos.NamesToLtreeArgs(query.categories)
 	if len(categoriesArgs) == 0 {
 		query.err = fmt.Errorf("'%s' is empty", models.CategoriesKey)
 		return "", nil, query.err

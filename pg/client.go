@@ -24,3 +24,7 @@ func (c Client) Close() {
 	}
 	c.Pool.Close()
 }
+
+func (c Client) IsEmpty() bool {
+	return c.Pool == nil
+}

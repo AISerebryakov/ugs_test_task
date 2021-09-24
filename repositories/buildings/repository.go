@@ -62,3 +62,7 @@ func (r Repository) Insert(ctx context.Context, building models.Building) error 
 	}
 	return nil
 }
+
+func (r Repository) IsEmpty() bool {
+	return r.client.IsEmpty()
+}

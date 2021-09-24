@@ -23,6 +23,7 @@ type Api struct {
 	conf        Config
 	companyMng  CompanyManager
 	buildingMng BuildingManager
+	categoryMng CategoryManager
 }
 
 func NewApi(conf Config) (api Api, _ error) {
@@ -32,6 +33,7 @@ func NewApi(conf Config) (api Api, _ error) {
 	api.conf = conf
 	api.companyMng = conf.CompanyManager
 	api.buildingMng = conf.BuildingManager
+	api.categoryMng = conf.CategoryManager
 	return api, nil
 }
 
@@ -43,6 +45,7 @@ func (api Api) Start(f func(error)) {
 
 //todo: add metrics server
 //todo: add debug server
+//todo: add max objects for getting
 
 func (api *Api) startServer() error {
 	conf := api.conf
@@ -73,6 +76,8 @@ func (h handler) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 		h.companyHandlers(res, req)
 	case buildingsPath:
 		h.buildingHandlers(res, req)
+	case categoriesPath:
+		h.categoriesHandlers(res, req)
 	}
 	if !res.err.IsEmpty() {
 		logger.TraceId(req.Id()).Error(res.Error().OriginError().Error())

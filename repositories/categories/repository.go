@@ -1,4 +1,4 @@
-package categoryrepos
+package categories
 
 import (
 	"context"
@@ -6,10 +6,12 @@ import (
 	"time"
 	"ugc_test_task/models"
 	"ugc_test_task/pg"
+
+	sql "github.com/huandu/go-sqlbuilder"
 )
 
 const (
-	CategoriesTableName = "categories"
+	TableName = "categories"
 )
 
 var (
@@ -31,4 +33,21 @@ func New(conf Config) (r Repository, err error) {
 		return Repository{}, err
 	}
 	return r, nil
+}
+
+func (r Repository) Insert(ctx context.Context, category models.Category) error {
+	//todo: handle error
+	if err := category.Validate(); err != nil {
+		return err
+	}
+	sqlStr, args := sql.InsertInto(TableName).Cols(categoryFields...).
+		Values(category.Id, category.Name, category.CreateAt).BuildWithFlavor(sql.PostgreSQL)
+	if _, err := r.client.Exec(ctx, sqlStr, args...); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r Repository) IsEmpty() bool {
+	return r.client.IsEmpty()
 }
