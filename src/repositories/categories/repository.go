@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	models2 "ugc_test_task/src/models"
+	"ugc_test_task/src/models"
 	pg2 "ugc_test_task/src/pg"
 
 	sql "github.com/huandu/go-sqlbuilder"
@@ -15,7 +15,8 @@ const (
 )
 
 var (
-	categoryFields = []string{models2.IdKey, models2.NameKey, models2.CreateAt}
+	categoryFields = []string{models.IdKey, models.NameKey, models.CreateAt}
+	indexFields    = []string{models.NameKey, models.CreateAt}
 )
 
 type Repository struct {
@@ -32,10 +33,43 @@ func New(conf Config) (r Repository, err error) {
 	if err != nil {
 		return Repository{}, err
 	}
+	if err := r.createTable(); err != nil {
+		return Repository{}, fmt.Errorf("create '%s' table: %v", TableName, err)
+	}
+	if err := r.createIndexes(); err != nil {
+		return Repository{}, err
+	}
 	return r, nil
 }
 
-func (r Repository) Insert(ctx context.Context, category models2.Category) error {
+func (r Repository) createTable() error {
+	s := sql.CreateTable(TableName).IfNotExists().
+		Define(models.IdKey, "uuid", "primary key", "not null").
+		Define(models.NameKey, "ltree", fmt.Sprintf("check (%s != '')", models.NameKey)).
+		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).String()
+	_, err := r.client.Exec(context.Background(), s)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r Repository) createIndexes() error {
+	for _, indexField := range indexFields {
+		indexType := "btree"
+		if indexField == models.NameKey {
+			indexType = "gist"
+		}
+		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, TableName, indexType, indexField)
+		_, err := r.client.Exec(context.Background(), sqlStr)
+		if err != nil {
+			return fmt.Errorf("create index for field '%s': %v", indexField, err)
+		}
+	}
+	return nil
+}
+
+func (r Repository) Insert(ctx context.Context, category models.Category) error {
 	//todo: handle error
 	if err := category.Validate(); err != nil {
 		return err

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
-	models2 "ugc_test_task/src/models"
-	pg2 "ugc_test_task/src/pg"
+	"ugc_test_task/src/models"
+	"ugc_test_task/src/pg"
 	buildrepos "ugc_test_task/src/repositories/buildings"
-	"ugc_test_task/src/repositories/categories"
+	categrepos "ugc_test_task/src/repositories/categories"
 
 	"github.com/jackc/pgx/v4"
 
@@ -20,35 +20,42 @@ const (
 )
 
 var (
-	companyFields         = []string{models2.IdKey, models2.NameKey, models2.CreateAt, models2.BuildingIdKey, models2.AddressKey, models2.PhoneNumbersKey}
-	companyFullFields     = append(companyFields, models2.CategoriesKey)
+	companyFields         = []string{models.IdKey, models.NameKey, models.CreateAt, models.BuildingIdKey, models.AddressKey, models.PhoneNumbersKey}
+	companyFullFields     = append(companyFields, models.CategoriesKey)
 	companyFullFieldQuery = []string{
-		models2.IdKey,
-		models2.NameKey,
-		TableName + "." + models2.CreateAt,
-		models2.BuildingIdKey,
-		models2.AddressKey,
-		models2.PhoneNumbersKey,
-		fmt.Sprintf("array_agg(ltree2text(%s.%s)) AS %s", CategoryCompaniesTableName, CategoryNameKey, models2.CategoriesKey)}
+		models.IdKey,
+		models.NameKey,
+		TableName + "." + models.CreateAt,
+		models.BuildingIdKey,
+		models.AddressKey,
+		models.PhoneNumbersKey,
+		fmt.Sprintf("array_agg(ltree2text(%s.%s)) AS %s", CategoryCompaniesTableName, CategoryNameKey, models.CategoriesKey)}
+	companyIndexFields = []string{models.BuildingIdKey, models.CreateAt}
 )
 
 type Repository struct {
-	client        pg2.Client
-	categoryRepos categories.Repository
+	client        pg.Client
+	categoryRepos categrepos.Repository
 }
 
 func New(conf Config) (r Repository, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	r.categoryRepos = conf.CategoryRepos
-	r.client, err = pg2.Connect(ctx, conf.pgConfig)
+	r.client, err = pg.Connect(ctx, conf.pgConfig)
 	if err != nil {
+		return Repository{}, err
+	}
+	if err := r.createTables(); err != nil {
+		return Repository{}, err
+	}
+	if err := r.createIndexes(); err != nil {
 		return Repository{}, err
 	}
 	return r, nil
 }
 
-func (r Repository) InitTables() error {
+func (r Repository) createTables() error {
 	if err := r.createCompaniesTable(); err != nil {
 		return fmt.Errorf("create '%s' table: %v", TableName, err)
 	}
@@ -61,6 +68,31 @@ func (r Repository) InitTables() error {
 	return nil
 }
 
+func (r Repository) createIndexes() error {
+	if err := r.createCompanyIndexes(); err != nil {
+		return fmt.Errorf("create indexes for table '%s': %v", TableName, err)
+	}
+	if err := r.createCategoryCompaniesIndexes(); err != nil {
+		return fmt.Errorf("create indexes for table '%s': %v", CategoryCompaniesTableName, err)
+	}
+	return nil
+}
+
+func (r Repository) createCompanyIndexes() error {
+	for _, indexField := range companyIndexFields {
+		indexType := "btree"
+		if indexField == models.BuildingIdKey {
+			indexType = "hash"
+		}
+		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, TableName, indexType, indexField)
+		_, err := r.client.Exec(context.Background(), sqlStr)
+		if err != nil {
+			return fmt.Errorf("create index for field '%s': %v", indexField, err)
+		}
+	}
+	return nil
+}
+
 // Stop todo: add gracefully shutdown
 func (r Repository) Stop() {
 	r.client.Close()
@@ -69,12 +101,12 @@ func (r Repository) Stop() {
 
 func (r Repository) createCompaniesTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
-		Define(models2.IdKey, "uuid", "primary key", "not null").
-		Define(models2.NameKey, "varchar(200)", "not null").
-		Define(models2.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models2.CreateAt)).
-		Define(models2.BuildingIdKey, "uuid", "references "+buildrepos.TableName, "not null").
-		Define(models2.AddressKey, "varchar(200)", "not null").
-		Define(models2.PhoneNumbersKey, "varchar(20)[]").String()
+		Define(models.IdKey, "uuid", "primary key", "not null").
+		Define(models.NameKey, "varchar(200)", "not null").
+		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).
+		Define(models.BuildingIdKey, "uuid", "references "+buildrepos.TableName, "not null").
+		Define(models.AddressKey, "varchar(200)", "not null").
+		Define(models.PhoneNumbersKey, "varchar(50)[]").String()
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {
 		return err
@@ -84,8 +116,8 @@ func (r Repository) createCompaniesTable() error {
 
 func (r Repository) createCompaniesFullView() error {
 	b := sql.NewSelectBuilder().Select(companyFullFieldQuery...).From(TableName)
-	s, _ := b.Join(CategoryCompaniesTableName, fmt.Sprintf("%s.%s = %s.%s", TableName, models2.IdKey, CategoryCompaniesTableName, CompanyIdKey)).
-		GroupBy(fmt.Sprintf("%s.%s", TableName, models2.IdKey)).BuildWithFlavor(sql.PostgreSQL)
+	s, _ := b.Join(CategoryCompaniesTableName, TableName+"."+models.IdKey+" = "+CategoryCompaniesTableName+"."+CompanyIdKey).
+		GroupBy(TableName + "." + models.IdKey).BuildWithFlavor(sql.PostgreSQL)
 	s = fmt.Sprintf("CREATE OR REPLACE VIEW %s AS %s", FullViewName, s)
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {
@@ -94,7 +126,7 @@ func (r Repository) createCompaniesFullView() error {
 	return nil
 }
 
-func (r Repository) Insert(ctx context.Context, comp models2.Company) error {
+func (r Repository) Insert(ctx context.Context, comp models.Company) error {
 	if len(comp.Categories) > 0 {
 		if err := r.insertWithCategories(ctx, comp); err != nil {
 			return err
@@ -104,14 +136,14 @@ func (r Repository) Insert(ctx context.Context, comp models2.Company) error {
 	return r.insert(ctx, nil, comp)
 }
 
-func (r Repository) insertWithCategories(ctx context.Context, comp models2.Company) error {
+func (r Repository) insertWithCategories(ctx context.Context, comp models.Company) error {
 	err := r.client.BeginFunc(ctx, func(tx pgx.Tx) error {
 		if err := r.insert(ctx, tx, comp); err != nil {
 			return err
 		}
 		b := sql.InsertInto(CategoryCompaniesTableName).Cols(categoryCompanyFields...)
 		categoriesIsFound := false
-		err := r.categoryRepos.Select(ctx).ByNames(comp.Categories).Iter(func(category models2.Category) error {
+		err := r.categoryRepos.Select(ctx).ByNames(comp.Categories).Iter(func(category models.Category) error {
 			categoriesIsFound = true
 			b.Values(category.Id, comp.Id, category.Name, comp.CreateAt)
 			return nil
@@ -120,11 +152,11 @@ func (r Repository) insertWithCategories(ctx context.Context, comp models2.Compa
 			return fmt.Errorf("fetch categories by names: %v", err)
 		}
 		if !categoriesIsFound {
-			return fmt.Errorf("%s: %v: not found", models2.CategoriesKey, comp.Categories)
+			return fmt.Errorf("%s: %v: not found", models.CategoriesKey, comp.Categories)
 		}
 		sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
 		if _, err := tx.Exec(ctx, sqlStr, args...); err != nil {
-			return pg2.NewError(err)
+			return pg.NewError(err)
 		}
 		return nil
 	})
@@ -134,7 +166,7 @@ func (r Repository) insertWithCategories(ctx context.Context, comp models2.Compa
 	return nil
 }
 
-func (r Repository) insert(ctx context.Context, tx pgx.Tx, comp models2.Company) error {
+func (r Repository) insert(ctx context.Context, tx pgx.Tx, comp models.Company) error {
 	sqlStr, args := sql.InsertInto(TableName).Cols(companyFields...).
 		Values(comp.Id, comp.Name, comp.CreateAt, comp.BuildingId, comp.Address, comp.PhoneNumbers).BuildWithFlavor(sql.PostgreSQL)
 	if tx != nil {
@@ -144,17 +176,17 @@ func (r Repository) insert(ctx context.Context, tx pgx.Tx, comp models2.Company)
 		return nil
 	}
 	if _, err := r.client.Exec(ctx, sqlStr, args...); err != nil {
-		return pg2.NewError(err)
+		return pg.NewError(err)
 	}
 	return nil
 }
 
 func (r Repository) DeleteCompanyById(ctx context.Context, id string) (err error) {
 	b := sql.DeleteFrom(TableName)
-	sqlStr, args := b.Where(b.Equal(models2.IdKey, id)).BuildWithFlavor(sql.PostgreSQL)
+	sqlStr, args := b.Where(b.Equal(models.IdKey, id)).BuildWithFlavor(sql.PostgreSQL)
 	_, err = r.client.Exec(ctx, sqlStr, args...)
 	if err != nil {
-		return pg2.NewError(err)
+		return pg.NewError(err)
 	}
 	return nil
 }

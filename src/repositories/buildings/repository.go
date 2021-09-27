@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	models2 "ugc_test_task/src/models"
+	"ugc_test_task/src/models"
 	"ugc_test_task/src/pg"
 
 	sql "github.com/huandu/go-sqlbuilder"
@@ -15,14 +15,13 @@ const (
 )
 
 var (
-	buildingsFields = []string{models2.IdKey, models2.CreateAt, models2.AddressKey, models2.LocationKey}
+	buildingsFields = []string{models.IdKey, models.CreateAt, models.AddressKey, models.LocationKey}
+	indexFields     = []string{models.CreateAt, models.AddressKey}
 )
 
 type Repository struct {
 	client pg.Client
 }
-
-//todo: create indexes
 
 func New(conf Config) (r Repository, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -34,15 +33,18 @@ func New(conf Config) (r Repository, err error) {
 	if err := r.createTable(); err != nil {
 		return Repository{}, fmt.Errorf("create '%s' table: %v", TableName, err)
 	}
+	if err := r.createIndexes(); err != nil {
+		return Repository{}, fmt.Errorf("create indexes: %v", err)
+	}
 	return r, nil
 }
 
 func (r Repository) createTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
-		Define(models2.IdKey, "uuid", "primary key", "not null").
-		Define(models2.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models2.CreateAt)).
-		Define(models2.AddressKey, "varchar(200)", "not null").
-		Define(models2.LocationKey, "jsonb", "not null").String()
+		Define(models.IdKey, "uuid", "primary key", "not null").
+		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).
+		Define(models.AddressKey, "varchar(200)", "not null").
+		Define(models.LocationKey, "jsonb", "not null").String()
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {
 		return err
@@ -50,7 +52,23 @@ func (r Repository) createTable() error {
 	return nil
 }
 
-func (r Repository) Insert(ctx context.Context, building models2.Building) error {
+func (r Repository) createIndexes() error {
+	for _, indexField := range indexFields {
+		indexType := "btree"
+		if indexField == models.AddressKey {
+			indexType = "hash"
+		}
+		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, TableName, indexType, indexField)
+		fmt.Println(sqlStr)
+		_, err := r.client.Exec(context.Background(), sqlStr)
+		if err != nil {
+			return fmt.Errorf("create index for field '%s': %v", indexField, err)
+		}
+	}
+	return nil
+}
+
+func (r Repository) Insert(ctx context.Context, building models.Building) error {
 	//todo: handle error
 	if err := building.Validate(); err != nil {
 		return err

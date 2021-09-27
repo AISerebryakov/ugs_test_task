@@ -88,22 +88,23 @@ func initRepositories() (err error) {
 		Password: conf.Pg.Password,
 	}
 
+	buildingRepos, err = buildrepos.New(buildrepos.NewConfig(pgConfig))
+	if err != nil {
+		return fmt.Errorf("init 'building' repository: %v", err)
+	}
+
 	categoryRepos, err = categrepos.New(categrepos.NewConfig(pgConfig))
 	if err != nil {
-		return fmt.Errorf("init category repository: %v", err)
+		return fmt.Errorf("init 'category' repository: %v", err)
 	}
 
 	companyConf := companrepos.NewConfig(pgConfig)
 	companyConf.CategoryRepos = categoryRepos
 	companyRepos, err = companrepos.New(companyConf)
 	if err != nil {
-		return fmt.Errorf("init company repository: %v", err)
+		return fmt.Errorf("init 'company' repository: %v", err)
 	}
 
-	buildingRepos, err = buildrepos.New(buildrepos.NewConfig(pgConfig))
-	if err != nil {
-		return fmt.Errorf("init building repository: %v", err)
-	}
 	return nil
 }
 

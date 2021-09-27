@@ -18,10 +18,9 @@ const (
 )
 
 var (
-	categoryCompanyFields = []string{CategoryIdKey, CompanyIdKey, CategoryNameKey, models.CreateAt}
+	categoryCompanyFields      = []string{CategoryIdKey, CompanyIdKey, CategoryNameKey, models.CreateAt}
+	categoryCompanyIndexFields = []string{CategoryNameKey, models.CreateAt}
 )
-
-//todo: create indexes
 
 func (r Repository) createCategoryCompaniesTable() error {
 	s := sql.CreateTable(CategoryCompaniesTableName).IfNotExists().
@@ -33,6 +32,21 @@ func (r Repository) createCategoryCompaniesTable() error {
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (r Repository) createCategoryCompaniesIndexes() error {
+	for _, indexField := range categoryCompanyIndexFields {
+		indexType := "btree"
+		if indexField == CategoryNameKey {
+			indexType = "gist"
+		}
+		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, CategoryCompaniesTableName, indexType, indexField)
+		_, err := r.client.Exec(context.Background(), sqlStr)
+		if err != nil {
+			return fmt.Errorf("create index for field '%s': %v", indexField, err)
+		}
 	}
 	return nil
 }

@@ -34,7 +34,7 @@ func initTestRepository() (repos Repository, err error) {
 	if err != nil {
 		return Repository{}, fmt.Errorf("create repository: %v", err)
 	}
-	if err = repos.InitTables(); err != nil {
+	if err = repos.createTables(); err != nil {
 		return Repository{}, err
 	}
 	return repos, nil
