@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"ugc_test_task/src/errors"
 	"ugc_test_task/src/models"
-	pg2 "ugc_test_task/src/pg"
+	"ugc_test_task/src/pg"
 
 	sql "github.com/huandu/go-sqlbuilder"
 )
@@ -20,7 +21,7 @@ var (
 )
 
 type Repository struct {
-	client pg2.Client
+	client pg.Client
 }
 
 func New(conf Config) (r Repository, err error) {
@@ -29,7 +30,7 @@ func New(conf Config) (r Repository, err error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	r.client, err = pg2.Connect(ctx, conf.pgConfig)
+	r.client, err = pg.Connect(ctx, conf.pgConfig)
 	if err != nil {
 		return Repository{}, err
 	}
@@ -70,14 +71,13 @@ func (r Repository) createIndexes() error {
 }
 
 func (r Repository) Insert(ctx context.Context, category models.Category) error {
-	//todo: handle error
 	if err := category.Validate(); err != nil {
-		return err
+		return errors.InputParamsIsInvalid.New("'category' is invalid").Add(err.Error())
 	}
 	sqlStr, args := sql.InsertInto(TableName).Cols(categoryFields...).
 		Values(category.Id, category.Name, category.CreateAt).BuildWithFlavor(sql.PostgreSQL)
 	if _, err := r.client.Exec(ctx, sqlStr, args...); err != nil {
-		return pg2.NewError(err)
+		return pg.NewError(err)
 	}
 	return nil
 }

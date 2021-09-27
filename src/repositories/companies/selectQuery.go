@@ -2,9 +2,9 @@ package companies
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	models2 "ugc_test_task/src/models"
+	"ugc_test_task/src/errors"
+	"ugc_test_task/src/models"
 	"ugc_test_task/src/pg"
 	categrepos "ugc_test_task/src/repositories/categories"
 
@@ -15,14 +15,15 @@ import (
 
 type SelectQuery struct {
 	ctx        context.Context
-	err    error
-	client pg.Client
-	id     string
+	err        error
+	client     pg.Client
+	id         string
 	buildingId string
-	categories []string
+	category   string
 	limit      int
 	fromDate   int64
 	toDate     int64
+	withSort   bool
 }
 
 func (r Repository) Select(ctx context.Context) *SelectQuery {
@@ -34,7 +35,6 @@ func (r Repository) Select(ctx context.Context) *SelectQuery {
 func newSelectQuery(ctx context.Context) *SelectQuery {
 	query := new(SelectQuery)
 	query.ctx = ctx
-	query.categories = make([]string, 0)
 	return query
 }
 
@@ -42,8 +42,8 @@ func (query *SelectQuery) ById(id string) *SelectQuery {
 	if len(id) == 0 || query.err != nil {
 		return query
 	}
-	if len(query.categories) > 0 {
-		query.err = fmt.Errorf("can't use '%s' with '%s'", models2.IdKey, models2.CategoriesKey)
+	if len(query.category) > 0 {
+		query.err = fmt.Errorf("can't use '%s' with '%s'", models.IdKey, models.CategoriesKey)
 		return query
 	}
 	query.id = id
@@ -54,24 +54,23 @@ func (query *SelectQuery) ByBuildingId(id string) *SelectQuery {
 	if len(id) == 0 || query.err != nil {
 		return query
 	}
-	if len(query.categories) > 0 {
-		query.err = fmt.Errorf("can't use '%s' with '%s'", models2.BuildingIdKey, models2.CategoriesKey)
+	if len(query.category) > 0 {
+		query.err = fmt.Errorf("can't use '%s' with '%s'", models.BuildingIdKey, models.CategoriesKey)
 		return query
 	}
 	query.buildingId = id
 	return query
 }
 
-func (query *SelectQuery) ForCategories(categories []string) *SelectQuery {
-	if len(categories) == 0 || query.err != nil {
+func (query *SelectQuery) ByCategory(category string) *SelectQuery {
+	if len(category) == 0 || query.err != nil {
 		return query
 	}
 	if len(query.id) > 0 || len(query.buildingId) > 0 {
-		query.err = fmt.Errorf("can't use '%s' with '%s' or '%s'", models2.CategoriesKey, models2.IdKey, models2.CategoriesKey)
+		query.err = fmt.Errorf("can't use '%s' with '%s' or '%s'", models.CategoriesKey, models.IdKey, models.BuildingIdKey)
 		return query
 	}
-	query.categories = query.categories[:0]
-	query.categories = append(query.categories, categories...)
+	query.category = category
 	return query
 }
 
@@ -99,57 +98,59 @@ func (query *SelectQuery) Limit(limit int) *SelectQuery {
 	return query
 }
 
-func (query *SelectQuery) One() (models2.Company, bool, error) {
+func (query *SelectQuery) WithSort() *SelectQuery {
 	if query.err != nil {
-		return models2.Company{}, false, query.err
+		return query
+	}
+	query.withSort = true
+	return query
+}
+
+func (query *SelectQuery) One() (models.Company, bool, error) {
+	if query.err != nil {
+		return models.Company{}, false, query.err
 	}
 	query.Limit(1)
 	sqlStr, args, err := query.build()
-	//todo: handle error
 	if err != nil {
-		return models2.Company{}, false, err
+		return models.Company{}, false, errors.Wrap(err, "building sql query")
 	}
 	row := query.client.QueryRow(query.ctx, sqlStr, args...)
 	if err = row.Scan(); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models2.Company{}, false, nil
+			return models.Company{}, false, nil
 		}
-		//todo: handle error
-		return models2.Company{}, false, err
+		return models.Company{}, false, pg.NewError(err)
 	}
 
-	return models2.Company{}, true, nil
+	return models.Company{}, true, nil
 }
 
-func (query *SelectQuery) Iter(callback func(models2.Company) error) error {
+func (query *SelectQuery) Iter(callback func(models.Company) error) error {
 	if query.err != nil {
 		return query.err
 	}
 	sqlStr, args, err := query.build()
-	//todo: handle error
 	if err != nil {
-		return err
+		return errors.Wrap(err, "building sql query")
 	}
 	rows, err := query.client.Query(query.ctx, sqlStr, args...)
-	//todo: handle error
 	if err != nil {
-		return err
+		return pg.NewError(err)
 	}
 	defer rows.Close()
-	company := models2.Company{}
+	company := models.Company{}
 	for rows.Next() {
 		company.Reset()
 		if err = rows.Scan(&company.Id, &company.Name, &company.CreateAt, &company.BuildingId, &company.Address, &company.PhoneNumbers, &company.Categories); err != nil {
 			break
 		}
 		if err = callback(company); err != nil {
-			//todo: handle error
 			return err
 		}
 	}
 	if err = rows.Err(); err != nil {
-		//todo: handle error
-		return err
+		return pg.NewError(err)
 	}
 	return nil
 }
@@ -160,48 +161,53 @@ func (query SelectQuery) String() string {
 }
 
 func (query SelectQuery) build() (string, []interface{}, error) {
-	if len(query.categories) > 0 {
-		return query.buildForCategories()
+	if len(query.category) > 0 {
+		return query.buildWithCategory()
 	}
 	b := sql.Select(companyFullFields...).From(FullViewName)
 	if len(query.id) != 0 {
-		b = b.Where(b.Equal(models2.IdKey, query.id))
+		b = b.Where(b.Equal(models.IdKey, query.id))
 	}
 	if len(query.buildingId) != 0 {
-		b = b.Where(b.Equal(models2.BuildingIdKey, query.buildingId))
+		b = b.Where(b.Equal(models.BuildingIdKey, query.buildingId))
 	}
 	if query.fromDate > 0 {
-		b = b.Where(b.GE(models2.CreateAt, query.fromDate))
+		b = b.Where(b.GE(models.CreateAt, query.fromDate))
 	}
 	if query.toDate > 0 {
-		b = b.Where(b.LE(models2.CreateAt, query.toDate))
+		b = b.Where(b.LE(models.CreateAt, query.toDate))
 	}
 	if query.limit > 0 {
 		b = b.Limit(query.limit)
+	}
+	if query.withSort {
+		b = b.OrderBy(models.CreateAt).Asc()
 	}
 	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
 	return sqlStr, args, nil
 }
 
-//todo: add search by category name
-func (query SelectQuery) buildForCategories() (string, []interface{}, error) {
+func (query SelectQuery) buildWithCategory() (string, []interface{}, error) {
 	b := sql.Select(companyFullFieldQuery...).From(CategoryCompaniesTableName)
-	categoriesArgs := categrepos.NamesToLtreeArgs(query.categories)
+	categoriesArgs := categrepos.PrepareSearchByName(query.category)
 	if len(categoriesArgs) == 0 {
-		query.err = fmt.Errorf("'%s' is empty", models2.CategoriesKey)
-		return "", nil, query.err
+		return "", nil, errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.NameKey))
 	}
+	b = b.Where(CategoryNameKey+" @ "+b.Args.Add(categoriesArgs)).
+		Join(TableName, TableName+"."+models.IdKey+"="+CategoryCompaniesTableName+"."+CompanyIdKey).
+		GroupBy(TableName + "." + models.IdKey)
 	if query.fromDate > 0 {
-		b = b.Where(b.GE(models2.CreateAt, query.fromDate))
+		b = b.Where(b.GE(models.CreateAt, query.fromDate))
 	}
 	if query.toDate > 0 {
-		b = b.Where(b.LE(models2.CreateAt, query.toDate))
+		b = b.Where(b.LE(models.CreateAt, query.toDate))
 	}
 	if query.limit > 0 {
 		b = b.Limit(query.limit)
 	}
-	sqlStr, args := b.Where(CategoryNameKey+" @ "+b.Args.Add(categoriesArgs)).
-		Join(TableName, TableName+"."+models2.IdKey+"="+CategoryCompaniesTableName+"."+CompanyIdKey).
-		GroupBy(TableName + "." + models2.IdKey).BuildWithFlavor(sql.PostgreSQL)
+	if query.withSort {
+		b = b.OrderBy(models.CreateAt).Asc()
+	}
+	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
 	return sqlStr, args, nil
 }

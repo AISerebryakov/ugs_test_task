@@ -56,7 +56,7 @@ func TestRepository_FetchCompaniesForCategories(t *testing.T) {
 	assert.NoError(t, err, "Insert comp to repository")
 
 	found := false
-	err = repos.Select(context.Background()).ForCategories(newComp.Categories).Iter(func(company models.Company) error {
+	err = repos.Select(context.Background()).ByCategory(newComp.Categories[0]).Iter(func(company models.Company) error {
 		t.Log(company)
 		if company.Id == newComp.Id {
 			found = true

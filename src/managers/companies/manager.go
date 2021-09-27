@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 	"ugc_test_task/src/errors"
-	"ugc_test_task/src/managers"
 	"ugc_test_task/src/models"
 	"ugc_test_task/src/repositories/companies"
 )
@@ -28,8 +27,6 @@ func New(conf Config) (m Manager, _ error) {
 	return m, nil
 }
 
-//todo: normalize of phone numbers
-
 func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
 	if err := query.Validate(); err != nil {
 		return models.Company{}, errors.QueryIsInvalid.New(err.Error())
@@ -43,7 +40,7 @@ func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
 	comp.PhoneNumbers = query.PhoneNumbers
 	comp.Categories = query.Categories
 	if err := m.companyRepos.Insert(ctx, comp); err != nil {
-		return models.Company{}, fmt.Errorf("%w: %v", managers.ErrSaveToDb, err)
+		return models.Company{}, errors.Wrap(err, "insert 'company' to db")
 	}
 	return comp, nil
 }
@@ -55,14 +52,11 @@ func (m Manager) GetCompanies(query GetQuery, callback func(models.Company) erro
 	if len(query.BuildingId) > 0 && len(query.Id) == 0 {
 		reposQuery = reposQuery.ByBuildingId(query.BuildingId)
 	}
-	if len(query.Categories) > 0 && len(query.BuildingId) == 0 && len(query.Id) == 0 {
-		//todo: prepare category
-		reposQuery = reposQuery.ForCategories(nil)
+	if len(query.Category) > 0 && len(query.BuildingId) == 0 && len(query.Id) == 0 {
+		reposQuery = reposQuery.ByCategory(query.Category)
 	}
-
 	reposQuery = reposQuery.FromDate(query.FromDate).
-		ToDate(query.ToDate).
-		Limit(query.Limit)
+		ToDate(query.ToDate).Limit(query.Limit).WithSort()
 	err := reposQuery.Iter(func(company models.Company) error {
 		if err := callback(company); err != nil {
 			return err
@@ -70,7 +64,7 @@ func (m Manager) GetCompanies(query GetQuery, callback func(models.Company) erro
 		return nil
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "fetch 'companies' from db")
 	}
 	return nil
 }

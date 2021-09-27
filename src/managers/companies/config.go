@@ -7,7 +7,7 @@ import (
 //type CompanySelectQuery interface {
 //	ById(string) CompanySelectQuery
 //	ByBuildingId(string) CompanySelectQuery
-//	ForCategories([]string) CompanySelectQuery
+//	ByCategory([]string) CompanySelectQuery
 //	Iter(func(models.Company) error) error
 //}
 //

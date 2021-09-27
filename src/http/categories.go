@@ -10,7 +10,7 @@ import (
 	"ugc_test_task/src/logger"
 	"ugc_test_task/src/managers"
 	"ugc_test_task/src/managers/categories"
-	models2 "ugc_test_task/src/models"
+	"ugc_test_task/src/models"
 )
 
 const (
@@ -32,9 +32,9 @@ func (api Api) categoriesHandlers(res *Response, req Request) {
 func (api Api) getCategories(res *Response, req Request) {
 	query := newGetCategoriesQuery(req)
 	fmt.Println("Query: ", query)
-	categories := make([]models2.Category, 0)
+	categories := make([]models.Category, 0)
 	objectCounter := 0
-	err := api.categoryMng.GetCategories(query, func(category models2.Category) error {
+	err := api.categoryMng.GetCategories(query, func(category models.Category) error {
 		objectCounter++
 		categories = append(categories, category)
 		return nil
@@ -82,9 +82,8 @@ func (api Api) addCategory(res *Response, req Request) {
 func newGetCategoriesQuery(req Request) (query categories.GetQuery) {
 	urlQuery := req.URL.Query()
 	query.ReqId = req.Id()
-	query.Id = urlQuery.Get(models2.IdKey)
-	query.Name = urlQuery.Get(models2.NameKey)
-	query.SearchName = urlQuery.Get(SearchByNameKey)
+	query.Id = urlQuery.Get(models.IdKey)
+	query.Name = urlQuery.Get(models.NameKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
 	query.Limit = parseLimit(urlQuery)

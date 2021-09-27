@@ -52,7 +52,7 @@ func (m Manager) GetBuildings(query GetQuery, callback func(models.Building) err
 	reposQuery = reposQuery.ByAddress(query.Address).
 		FromDate(query.FromDate).
 		ToDate(query.ToDate).
-		Limit(query.Limit)
+		Limit(query.Limit).WithSort()
 	err := reposQuery.Iter(func(building models.Building) error {
 		if err := callback(building); err != nil {
 			return err

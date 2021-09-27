@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"ugc_test_task/src/errors"
 	"ugc_test_task/src/models"
 	"ugc_test_task/src/pg"
 	buildrepos "ugc_test_task/src/repositories/buildings"
@@ -126,14 +127,17 @@ func (r Repository) createCompaniesFullView() error {
 	return nil
 }
 
-func (r Repository) Insert(ctx context.Context, comp models.Company) error {
-	if len(comp.Categories) > 0 {
-		if err := r.insertWithCategories(ctx, comp); err != nil {
+func (r Repository) Insert(ctx context.Context, company models.Company) error {
+	if err := company.Validate(); err != nil {
+		return errors.InputParamsIsInvalid.New("'company' is invalid").Add(err.Error())
+	}
+	if len(company.Categories) > 0 {
+		if err := r.insertWithCategories(ctx, company); err != nil {
 			return err
 		}
 		return nil
 	}
-	return r.insert(ctx, nil, comp)
+	return r.insert(ctx, nil, company)
 }
 
 func (r Repository) insertWithCategories(ctx context.Context, comp models.Company) error {

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"ugc_test_task/src/common"
 
 	"github.com/google/uuid"
@@ -35,4 +36,26 @@ func (comp *Company) Reset() {
 	if comp.Categories != nil {
 		comp.Categories = comp.Categories[:0]
 	}
+}
+
+func (comp Company) Validate() error {
+	if len(comp.Id) == 0 {
+		return fmt.Errorf("'%s' is empty", IdKey)
+	}
+	if len(comp.Name) == 0 {
+		return fmt.Errorf("'%s' is empty", NameKey)
+	}
+	if comp.CreateAt == 0 {
+		return fmt.Errorf("'%s' is empty", CreateAt)
+	}
+	if len(comp.BuildingId) == 0 {
+		return fmt.Errorf("'%s' is empty", BuildingIdKey)
+	}
+	if len(comp.Address) == 0 {
+		return fmt.Errorf("'%s' is empty", AddressKey)
+	}
+	if len(comp.PhoneNumbers) == 0 {
+		return fmt.Errorf("'%s' is empty", PhoneNumbersKey)
+	}
+	return nil
 }

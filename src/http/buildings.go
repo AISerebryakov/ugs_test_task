@@ -9,7 +9,7 @@ import (
 	"ugc_test_task/src/logger"
 	"ugc_test_task/src/managers"
 	"ugc_test_task/src/managers/buildings"
-	models2 "ugc_test_task/src/models"
+	"ugc_test_task/src/models"
 )
 
 const (
@@ -27,9 +27,9 @@ func (api Api) buildingHandlers(res *Response, req Request) {
 
 func (api Api) getBuildings(res *Response, req Request) {
 	query := newGetBuildingsQuery(req)
-	buildings := make([]models2.Building, 0)
+	buildings := make([]models.Building, 0)
 	objectCounter := 0
-	err := api.buildingMng.GetBuildings(query, func(building models2.Building) error {
+	err := api.buildingMng.GetBuildings(query, func(building models.Building) error {
 		objectCounter++
 		buildings = append(buildings, building)
 		return nil
@@ -79,8 +79,8 @@ func (api Api) addBuilding(res *Response, req Request) {
 func newGetBuildingsQuery(req Request) (query buildings.GetQuery) {
 	urlQuery := req.URL.Query()
 	query.ReqId = req.Id()
-	query.Id = urlQuery.Get(models2.IdKey)
-	query.Address = urlQuery.Get(models2.AddressKey)
+	query.Id = urlQuery.Get(models.IdKey)
+	query.Address = urlQuery.Get(models.AddressKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
 	query.Limit = parseLimit(urlQuery)

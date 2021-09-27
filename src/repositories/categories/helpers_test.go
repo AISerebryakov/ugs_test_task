@@ -15,7 +15,6 @@ func TestNamesToLtreeArgs(t *testing.T) {
 
 func TestPrepareSearchByName(t *testing.T) {
 	args := PrepareSearchByName(`?±*tea, level_21, Привет, МёдЁ, @()#@#\/[]{}-=+`)
-	expectArgs := "tea*@|level21*@|Привет*@|МёдЁ*@"
+	expectArgs := "tea*@|level_21*@|Привет*@|МёдЁ*@"
 	assert.Equal(t, expectArgs, args)
-	t.Log(args)
 }

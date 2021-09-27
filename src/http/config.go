@@ -6,22 +6,22 @@ import (
 	"ugc_test_task/src/managers/buildings"
 	"ugc_test_task/src/managers/categories"
 	"ugc_test_task/src/managers/companies"
-	models2 "ugc_test_task/src/models"
+	"ugc_test_task/src/models"
 )
 
 type CompanyManager interface {
-	GetCompanies(query companies.GetQuery, clb func(firm models2.Company) error) error
-	AddCompany(query companies.AddQuery) (models2.Company, error)
+	GetCompanies(query companies.GetQuery, clb func(firm models.Company) error) error
+	AddCompany(query companies.AddQuery) (models.Company, error)
 }
 
 type BuildingManager interface {
-	GetBuildings(query buildings.GetQuery, callback func(models2.Building) error) error
-	AddBuilding(query buildings.AddQuery) (models2.Building, error)
+	GetBuildings(query buildings.GetQuery, callback func(models.Building) error) error
+	AddBuilding(query buildings.AddQuery) (models.Building, error)
 }
 
 type CategoryManager interface {
-	AddCategory(query categories.AddQuery) (models2.Category, error)
-	GetCategories(query categories.GetQuery, callback func(models2.Category) error) error
+	AddCategory(query categories.AddQuery) (models.Category, error)
+	GetCategories(query categories.GetQuery, callback func(models.Category) error) error
 }
 
 type Config struct {

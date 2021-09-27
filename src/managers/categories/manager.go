@@ -45,15 +45,11 @@ func (m Manager) GetCategories(query GetQuery, callback func(models.Category) er
 	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
 	reposQuery := m.categoryRepos.Select(ctx).ById(query.Id)
-	if len(query.SearchName) > 0 && len(query.Id) == 0 {
-		reposQuery = reposQuery.SearchByName(query.SearchName)
-	}
-	if len(query.Name) > 0 && len(query.Id) == 0 && len(query.SearchName) == 0 {
+	if len(query.Name) > 0 && len(query.Id) == 0 {
 		reposQuery = reposQuery.ByName(query.Name)
 	}
 	reposQuery = reposQuery.FromDate(query.FromDate).
-		ToDate(query.ToDate).
-		Limit(query.Limit)
+		ToDate(query.ToDate).Limit(query.Limit).WithSort()
 	err := reposQuery.Iter(func(category models.Category) error {
 		if err := callback(category); err != nil {
 			return err
@@ -61,7 +57,7 @@ func (m Manager) GetCategories(query GetQuery, callback func(models.Category) er
 		return nil
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "fetch 'categories' from db")
 	}
 	return nil
 }

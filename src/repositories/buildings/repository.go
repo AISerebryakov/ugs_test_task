@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"ugc_test_task/src/errors"
 	"ugc_test_task/src/models"
 	"ugc_test_task/src/pg"
 
@@ -59,7 +60,6 @@ func (r Repository) createIndexes() error {
 			indexType = "hash"
 		}
 		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, TableName, indexType, indexField)
-		fmt.Println(sqlStr)
 		_, err := r.client.Exec(context.Background(), sqlStr)
 		if err != nil {
 			return fmt.Errorf("create index for field '%s': %v", indexField, err)
@@ -69,9 +69,8 @@ func (r Repository) createIndexes() error {
 }
 
 func (r Repository) Insert(ctx context.Context, building models.Building) error {
-	//todo: handle error
 	if err := building.Validate(); err != nil {
-		return err
+		return errors.InputParamsIsInvalid.New("'building' is invalid").Add(err.Error())
 	}
 	sqlStr, args := sql.InsertInto(TableName).Cols(buildingsFields...).
 		Values(building.Id, building.CreateAt, building.Address, building.Location.ToJson()).BuildWithFlavor(sql.PostgreSQL)
