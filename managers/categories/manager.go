@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"ugc_test_task/managers"
+	"ugc_test_task/errors"
 	"ugc_test_task/models"
 	categrepos "ugc_test_task/repositories/categories"
 )
@@ -29,14 +29,14 @@ func New(conf Config) (m Manager, _ error) {
 
 func (m Manager) AddCategory(query AddQuery) (models.Category, error) {
 	if err := query.Validate(); err != nil {
-		return models.Category{}, fmt.Errorf("%w: %v", managers.ErrQueryInvalid, err)
+		return models.Category{}, errors.QueryIsInvalid.New(err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
 	category := models.NewCategory()
 	category.Name = query.Name
 	if err := m.categoryRepos.Insert(ctx, category); err != nil {
-		return models.Category{}, fmt.Errorf("%w: %v", managers.ErrSaveToDb, err)
+		return models.Category{}, errors.Wrap(err, "insert 'category' to db")
 	}
 	return category, nil
 }
@@ -46,7 +46,7 @@ func (m Manager) GetCategories(query GetQuery, callback func(models.Category) er
 	defer cancel()
 	reposQuery := m.categoryRepos.Select(ctx).ById(query.Id)
 	if len(query.SearchName) > 0 && len(query.Id) == 0 {
-		reposQuery = reposQuery.SearchByName(query.Name)
+		reposQuery = reposQuery.SearchByName(query.SearchName)
 	}
 	if len(query.Name) > 0 && len(query.Id) == 0 && len(query.SearchName) == 0 {
 		reposQuery = reposQuery.ByName(query.Name)

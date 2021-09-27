@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"ugc_test_task/managers"
+	"ugc_test_task/errors"
 	"ugc_test_task/models"
 	buildrepos "ugc_test_task/repositories/buildings"
 )
@@ -29,7 +29,7 @@ func New(conf Config) (m Manager, _ error) {
 
 func (m Manager) AddBuilding(query AddQuery) (models.Building, error) {
 	if err := query.Validate(); err != nil {
-		return models.Building{}, fmt.Errorf("%w: %v", managers.ErrQueryInvalid, err)
+		return models.Building{}, errors.QueryIsInvalid.New(err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
@@ -37,7 +37,7 @@ func (m Manager) AddBuilding(query AddQuery) (models.Building, error) {
 	building.Address = query.Address
 	building.Location = query.Location
 	if err := m.buildRepos.Insert(ctx, building); err != nil {
-		return models.Building{}, fmt.Errorf("%w: %v", managers.ErrSaveToDb, err)
+		return models.Building{}, errors.Wrap(err, "insert building to db")
 	}
 	return building, nil
 }

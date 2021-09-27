@@ -2,6 +2,8 @@ package http
 
 import (
 	"net/http"
+	"net/url"
+	"strconv"
 	"ugc_test_task/common/random"
 )
 
@@ -10,8 +12,9 @@ type Request struct {
 	id string
 }
 
-func NewRequest(httpReq *http.Request) Request {
-	return Request{Request: httpReq}
+func NewRequest(httpReq *http.Request) (req Request) {
+	req.Request = httpReq
+	return req
 }
 
 func (req *Request) Id() string {
@@ -29,4 +32,12 @@ func (req *Request) Id() string {
 
 func (req Request) Path() string {
 	return req.URL.Path
+}
+
+func parseLimit(query url.Values) int {
+	limit, _ := strconv.Atoi(query.Get(LimitKey))
+	if limit > maxGettingObjects || limit == 0 {
+		limit = maxGettingObjects
+	}
+	return limit
 }

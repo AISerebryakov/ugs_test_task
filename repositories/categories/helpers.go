@@ -13,7 +13,8 @@ var (
 
 func getRegexp() *regexp.Regexp {
 	once.Do(func() {
-		rg = regexp.MustCompile("[!@#$%^&*,?]")
+		//rg = regexp.MustCompile("[!@#$%^&*,?()]")
+		rg = regexp.MustCompile(`[^A-Za-zА-Яа-яёЁ0-9\s]`)
 	})
 	return rg
 }

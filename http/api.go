@@ -10,6 +10,7 @@ const (
 	RequestIdKey       = "X-Request-Id"
 	ApplicationJsonKey = "application/json"
 	ContentTypeKey     = "Content-Type"
+	LimitKey           = "limit"
 
 	maxGettingObjects = 200
 )
@@ -26,15 +27,12 @@ type Api struct {
 	categoryMng CategoryManager
 }
 
-func NewApi(conf Config) (api Api, _ error) {
-	if err := conf.Validate(); err != nil {
-		return Api{}, fmt.Errorf("config is invalid: %v", err)
-	}
+func NewApi(conf Config) (api Api) {
 	api.conf = conf
 	api.companyMng = conf.CompanyManager
 	api.buildingMng = conf.BuildingManager
 	api.categoryMng = conf.CategoryManager
-	return api, nil
+	return api
 }
 
 func (api Api) Start(f func(error)) {
@@ -48,6 +46,9 @@ func (api Api) Start(f func(error)) {
 //todo: add max objects for getting
 
 func (api *Api) startServer() error {
+	if err := api.conf.Validate(); err != nil {
+		return fmt.Errorf("config is invalid: %v", err)
+	}
 	conf := api.conf
 	api.server = &http.Server{
 		Addr:              conf.Address(),
@@ -80,7 +81,7 @@ func (h handler) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 		h.categoriesHandlers(res, req)
 	}
 	if !res.err.IsEmpty() {
-		logger.TraceId(req.Id()).Error(res.Error().OriginError().Error())
+		logger.TraceId(req.Id()).Error(res.Error().Error())
 	}
 	res.writeHeaders()
 	res.WriteBody()

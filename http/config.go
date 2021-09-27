@@ -2,16 +2,16 @@ package http
 
 import (
 	"fmt"
-	"ugc_test_task/companymng"
 	"ugc_test_task/config"
 	buildmng "ugc_test_task/managers/buildings"
 	categmng "ugc_test_task/managers/categories"
+	companmng "ugc_test_task/managers/companies"
 	"ugc_test_task/models"
 )
 
 type CompanyManager interface {
-	GetCompanies(query companymng.GetQuery, clb func(firm models.Company) error) error
-	AddCompany(query companymng.AddQuery) (models.Company, error)
+	GetCompanies(query companmng.GetQuery, clb func(firm models.Company) error) error
+	AddCompany(query companmng.AddQuery) (models.Company, error)
 }
 
 type BuildingManager interface {

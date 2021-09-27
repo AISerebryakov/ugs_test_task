@@ -3,26 +3,26 @@ package main
 import (
 	"fmt"
 	"os"
-	"ugc_test_task/companymng"
-	"ugc_test_task/companyrepos"
 	"ugc_test_task/config"
 	"ugc_test_task/http"
 	"ugc_test_task/logger"
 	buildmng "ugc_test_task/managers/buildings"
 	categmng "ugc_test_task/managers/categories"
+	companymng2 "ugc_test_task/managers/companies"
 	"ugc_test_task/pg"
 	buildrepos "ugc_test_task/repositories/buildings"
 	categrepos "ugc_test_task/repositories/categories"
+	companyrepos2 "ugc_test_task/repositories/companies"
 )
 
 var (
 	conf config.Config
 
 	categoryRepos categrepos.Repository
-	companyRepos  companyrepos.Repository
+	companyRepos  companyrepos2.Repository
 	buildingRepos buildrepos.Repository
 
-	companyMng  companymng.Manager
+	companyMng  companymng2.Manager
 	buildingMng buildmng.Manager
 	categoryMng categmng.Manager
 )
@@ -46,7 +46,7 @@ func main() {
 		logger.Msg("error while init managers").Error(err.Error())
 		os.Exit(1)
 	}
-	httpApi, err := http.NewApi(http.Config{
+	httpApi := http.NewApi(http.Config{
 		Host:              conf.HttpServer.Host,
 		Port:              conf.HttpServer.Port,
 		MetricsPort:       conf.HttpServer.MetricsPort,
@@ -93,9 +93,9 @@ func initRepositories() (err error) {
 		return fmt.Errorf("init category repository: %v", err)
 	}
 
-	companyConf := companyrepos.NewConfig(pgConfig)
+	companyConf := companyrepos2.NewConfig(pgConfig)
 	companyConf.CategoryRepos = categoryRepos
-	companyRepos, err = companyrepos.New(companyConf)
+	companyRepos, err = companyrepos2.New(companyConf)
 	if err != nil {
 		return fmt.Errorf("init company repository: %v", err)
 	}
@@ -108,7 +108,7 @@ func initRepositories() (err error) {
 }
 
 func initManagers() (err error) {
-	companyMng, err = companymng.New(companymng.Config{
+	companyMng, err = companymng2.New(companymng2.Config{
 		CompanyRepos: companyRepos,
 	})
 	if err != nil {

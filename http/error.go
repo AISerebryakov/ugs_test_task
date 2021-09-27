@@ -1,8 +1,8 @@
 package http
 
 import (
-	"errors"
 	"net/http"
+	"ugc_test_task/errors"
 	"ugc_test_task/managers"
 
 	"github.com/francoispqt/gojay"
@@ -18,8 +18,8 @@ const (
 )
 
 var (
-	ErrBodyIsEmpty = errors.New("body is empty")
-	ErrBodyReading = errors.New("body reading")
+	//ErrBodyIsEmpty = errors.New("body is empty")
+	//ErrBodyReading = errors.New("body reading")
 
 	encodeResponseErrorJson = []byte(`{
 	"data": null,
@@ -32,45 +32,34 @@ var (
 )
 
 type Error struct {
-	err      error
 	httpCode int
 	title    string
 	msg      string
 }
 
 func NewApiError(err error) Error {
-	if apiErr, ok := matchManagerErrors(err); ok {
-		apiErr.err = err
-		return apiErr
+	errType := errors.GetType(err)
+	switch errType {
+	case errors.QueryIsInvalid:
+		return NewIncorrectRequestError(err.Error())
+	case errors.QueryParseErr:
+		return NewIncorrectRequestError(err.Error())
+	case errors.BodyReadErr:
+		return NewIncorrectRequestError(err.Error())
+	case errors.BodyIsEmpty:
+		return NewIncorrectRequestError(err.Error())
+	case errors.Duplicate:
+		return NewIncorrectRequestError(err.Error())
+	case errors.InputParamsIsInvalid:
+		return NewIncorrectRequestError(err.Error())
+	default:
+		return NewInternalServerError(err.Error())
 	}
-	if apiErr, ok := matchApiErrors(err); ok {
-		apiErr.err = err
-		return apiErr
-	}
-	apiErr := NewInternalServerError(err.Error())
-	apiErr.err = err
-	return apiErr
 }
 
 func matchManagerErrors(err error) (Error, bool) {
-	if errors.Is(err, managers.ErrQueryInvalid) {
-		return NewIncorrectRequestError(err.Error()), true
-	}
-	if errors.Is(err, managers.ErrParsingQuery) {
-		return NewIncorrectRequestError(err.Error()), true
-	}
 	if errors.Is(err, managers.ErrSaveToDb) {
 		return NewInternalServerError(managers.ErrSaveToDb.Error()), true
-	}
-	return Error{}, false
-}
-
-func matchApiErrors(err error) (Error, bool) {
-	if errors.Is(err, ErrBodyIsEmpty) {
-		return NewIncorrectRequestError(ErrBodyIsEmpty.Error()), true
-	}
-	if errors.Is(err, ErrBodyReading) {
-		return NewIncorrectRequestError(err.Error()), true
 	}
 	return Error{}, false
 }
@@ -97,10 +86,6 @@ func NewEncodingJsonError(msg string) Error {
 		title:    EncodingJsonErrorTitle,
 		msg:      msg,
 	}
-}
-
-func (err Error) OriginError() error {
-	return err.err
 }
 
 func (err Error) Error() string {

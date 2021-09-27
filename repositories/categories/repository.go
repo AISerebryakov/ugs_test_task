@@ -43,7 +43,7 @@ func (r Repository) Insert(ctx context.Context, category models.Category) error 
 	sqlStr, args := sql.InsertInto(TableName).Cols(categoryFields...).
 		Values(category.Id, category.Name, category.CreateAt).BuildWithFlavor(sql.PostgreSQL)
 	if _, err := r.client.Exec(ctx, sqlStr, args...); err != nil {
-		return err
+		return pg.NewError(err)
 	}
 	return nil
 }

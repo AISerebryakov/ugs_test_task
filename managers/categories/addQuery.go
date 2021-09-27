@@ -3,7 +3,6 @@ package categories
 import (
 	"encoding/json"
 	"fmt"
-	"ugc_test_task/managers"
 	"ugc_test_task/models"
 )
 
@@ -14,7 +13,7 @@ type AddQuery struct {
 
 func NewAddQueryFromJson(data []byte) (query AddQuery, _ error) {
 	if err := json.Unmarshal(data, &query); err != nil {
-		return AddQuery{}, fmt.Errorf("%w: %s", managers.ErrParsingQuery, err)
+		return AddQuery{}, err
 	}
 	return query, nil
 }

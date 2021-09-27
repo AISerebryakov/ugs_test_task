@@ -3,6 +3,7 @@ package categories
 import (
 	"context"
 	"fmt"
+	"ugc_test_task/errors"
 	"ugc_test_task/models"
 	"ugc_test_task/pg"
 
@@ -35,7 +36,7 @@ func newSelectQuery(ctx context.Context) *SelectQuery {
 }
 
 func (query *SelectQuery) ById(id string) *SelectQuery {
-	if len(id) == 0 {
+	if len(id) == 0 || query.err != nil {
 		return query
 	}
 	query.id = id
@@ -43,7 +44,7 @@ func (query *SelectQuery) ById(id string) *SelectQuery {
 }
 
 func (query *SelectQuery) ByName(name string) *SelectQuery {
-	if len(name) == 0 {
+	if len(name) == 0 || query.err != nil {
 		return query
 	}
 	query.searchName = ""
@@ -53,7 +54,7 @@ func (query *SelectQuery) ByName(name string) *SelectQuery {
 }
 
 func (query *SelectQuery) ByNames(names []string) *SelectQuery {
-	if len(names) == 0 {
+	if len(names) == 0 || query.err != nil {
 		return query
 	}
 	query.searchName = ""
@@ -63,7 +64,7 @@ func (query *SelectQuery) ByNames(names []string) *SelectQuery {
 }
 
 func (query *SelectQuery) SearchByName(name string) *SelectQuery {
-	if len(name) == 0 {
+	if len(name) == 0 || query.err != nil {
 		return query
 	}
 	query.names = query.names[:0]
@@ -72,26 +73,40 @@ func (query *SelectQuery) SearchByName(name string) *SelectQuery {
 }
 
 func (query *SelectQuery) FromDate(date int64) *SelectQuery {
+	if query.err != nil {
+		return query
+	}
 	query.fromDate = date
 	return query
 }
 
 func (query *SelectQuery) ToDate(date int64) *SelectQuery {
+	if query.err != nil {
+		return query
+	}
 	query.toDate = date
 	return query
 }
 
 func (query *SelectQuery) Limit(limit int) *SelectQuery {
+	if query.err != nil {
+		return query
+	}
 	query.limit = limit
 	return query
 }
 
 func (query *SelectQuery) Iter(callback func(models.Category) error) error {
-	sqlStr, args := query.build()
-	rows, err := query.client.Query(query.ctx, sqlStr, args...)
-	//todo: handle error
+	if query.err != nil {
+		return query.err
+	}
+	sqlStr, args, err := query.build()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "build sql query")
+	}
+	rows, err := query.client.Query(query.ctx, sqlStr, args...)
+	if err != nil {
+		return pg.NewError(err)
 	}
 	defer rows.Close()
 	category := models.Category{}
@@ -101,23 +116,24 @@ func (query *SelectQuery) Iter(callback func(models.Category) error) error {
 			break
 		}
 		if err = callback(category); err != nil {
-			//todo: handle error
 			return err
 		}
 	}
 	if err = rows.Err(); err != nil {
-		//todo: handle error
-		return err
+		return pg.NewError(err)
 	}
 	return nil
 }
 
 func (query SelectQuery) String() string {
-	sqlStr, _ := query.build()
+	sqlStr, _, _ := query.build()
 	return sqlStr
 }
 
-func (query SelectQuery) build() (string, []interface{}) {
+func (query SelectQuery) build() (string, []interface{}, error) {
+	if len(query.searchName) > 0 {
+		return query.buildSearchName()
+	}
 	b := sql.Select(categoryFields...).From(TableName)
 	if len(query.id) != 0 {
 		b = b.Where(b.Equal(models.IdKey, query.id))
@@ -136,14 +152,24 @@ func (query SelectQuery) build() (string, []interface{}) {
 		}
 		b = b.Where(in)
 	}
-	return b.BuildWithFlavor(sql.PostgreSQL)
+	if query.fromDate > 0 {
+		b = b.Where(b.GE(models.CreateAt, query.fromDate))
+	}
+	if query.toDate > 0 {
+		b = b.Where(b.LE(models.CreateAt, query.toDate))
+	}
+	if query.limit > 0 {
+		b = b.Limit(query.limit)
+	}
+	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
+	return sqlStr, args, nil
 }
 
 func (query SelectQuery) buildSearchName() (string, []interface{}, error) {
 	b := sql.Select(categoryFields...).From(TableName)
 	nameArgs := PrepareSearchByName(query.searchName)
 	if len(nameArgs) == 0 {
-		query.err = fmt.Errorf("'%s' is empty", models.CategoriesKey)
+		query.err = errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.NameKey))
 		return "", nil, query.err
 	}
 	b = b.Where(models.NameKey + " @ " + b.Args.Add(nameArgs))
