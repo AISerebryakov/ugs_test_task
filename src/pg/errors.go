@@ -2,7 +2,7 @@ package pg
 
 import (
 	"fmt"
-	"ugc_test_task/src/errors"
+	"github.com/pretcat/ugc_test_task/src/errors"
 
 	"github.com/jackc/pgconn"
 )

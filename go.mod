@@ -1,4 +1,4 @@
-module ugc_test_task
+module github.com/pretcat/ugc_test_task
 
 go 1.16
 

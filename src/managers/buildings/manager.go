@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"ugc_test_task/src/errors"
-	"ugc_test_task/src/models"
-	buildrepos "ugc_test_task/src/repositories/buildings"
+	"github.com/pretcat/ugc_test_task/src/errors"
+	"github.com/pretcat/ugc_test_task/src/models"
+	buildrepos "github.com/pretcat/ugc_test_task/src/repositories/buildings"
 )
 
 const (

@@ -62,6 +62,7 @@ func (conf *Pg) readEnvVars() {
 		conf.Password = pass
 	}
 }
+
 func (conf *Pg) setupDefaultValues() {
 	conf.Host = pgDefaultHost
 	conf.Port = pgDefaultPort

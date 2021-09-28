@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 	"strconv"
-	"ugc_test_task/src/errors"
+	"github.com/pretcat/ugc_test_task/src/errors"
 
 	"github.com/francoispqt/gojay"
 )

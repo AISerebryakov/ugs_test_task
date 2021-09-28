@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"ugc_test_task/src/common/random"
+	"github.com/pretcat/ugc_test_task/src/common/random"
 )
 
 type Request struct {

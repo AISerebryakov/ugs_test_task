@@ -5,11 +5,11 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"ugc_test_task/src/errors"
-	"ugc_test_task/src/logger"
-	"ugc_test_task/src/managers"
-	"ugc_test_task/src/managers/companies"
-	"ugc_test_task/src/models"
+	"github.com/pretcat/ugc_test_task/src/errors"
+	"github.com/pretcat/ugc_test_task/src/logger"
+	"github.com/pretcat/ugc_test_task/src/managers"
+	"github.com/pretcat/ugc_test_task/src/managers/companies"
+	"github.com/pretcat/ugc_test_task/src/models"
 )
 
 func (api Api) companyHandlers(res *Response, req Request) {

@@ -2,7 +2,7 @@ package categories
 
 import (
 	"errors"
-	"ugc_test_task/src/repositories/categories"
+	"github.com/pretcat/ugc_test_task/src/repositories/categories"
 )
 
 type Config struct {

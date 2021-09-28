@@ -1,7 +1,7 @@
 package buildings
 
 import (
-	"ugc_test_task/src/pg"
+	"github.com/pretcat/ugc_test_task/src/pg"
 )
 
 type Config struct {

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"sync"
-	"ugc_test_task/src/pg"
+	"github.com/pretcat/ugc_test_task/src/pg"
 )
 
 const (

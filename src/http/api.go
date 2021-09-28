@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/pprof"
-	"ugc_test_task/src/errors"
-	"ugc_test_task/src/logger"
+	"github.com/pretcat/ugc_test_task/src/errors"
+	"github.com/pretcat/ugc_test_task/src/logger"
 
 	"github.com/arl/statsviz"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -40,7 +40,8 @@ type Api struct {
 	categoryMng   CategoryManager
 }
 
-func NewApi(conf Config) (api Api) {
+func NewApi(conf Config) *Api {
+	api := new(Api)
 	api.conf = conf
 	api.companyMng = conf.CompanyManager
 	api.buildingMng = conf.BuildingManager
@@ -48,7 +49,7 @@ func NewApi(conf Config) (api Api) {
 	return api
 }
 
-func (api Api) Start(f func(error)) {
+func (api *Api) Start(f func(error)) {
 	go func() {
 		if err := api.startMetricsServer(); err != nil {
 			f(fmt.Errorf("start metrics http server: %v", err))
@@ -67,29 +68,26 @@ func (api Api) Start(f func(error)) {
 }
 
 func (api *Api) Shutdown(ctx context.Context) {
+	if api == nil {
+		return
+	}
 	if api.server != nil {
-		go func() {
-			if err := api.server.Shutdown(ctx); err != nil {
-				logger.Errorf("api http server shutdown: %v", err)
-			}
-			logger.Info("api http server shutdown")
-		}()
+		if err := api.server.Shutdown(ctx); err != nil {
+			logger.Errorf("api http server shutdown: %v", err)
+		}
+		logger.Info("api http server shutdown")
 	}
 	if api.metricsServer != nil {
-		go func() {
-			if err := api.metricsServer.Shutdown(ctx); err != nil {
-				logger.Errorf("http metrics server graceful shutdown: %v", err)
-			}
-			logger.Info("http metrics server graceful shutdown")
-		}()
+		if err := api.metricsServer.Shutdown(ctx); err != nil {
+			logger.Errorf("metrics http server shutdown: %v", err)
+		}
+		logger.Info("metrics http server shutdown")
 	}
 	if api.debugServer != nil {
-		go func() {
-			if err := api.debugServer.Shutdown(ctx); err != nil {
-				logger.Errorf("debug http server shutdown: %v", err)
-			}
-			logger.Info("debug http server shutdown")
-		}()
+		if err := api.debugServer.Shutdown(ctx); err != nil {
+			logger.Errorf("debug http server shutdown: %v", err)
+		}
+		logger.Info("debug http server shutdown")
 	}
 }
 
@@ -164,7 +162,7 @@ func (api *Api) startDebugServer() error {
 	return nil
 }
 
-func (api Api) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
+func (api *Api) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 	req := NewRequest(httpReq)
 	res := NewResponse(rw, req.Id())
 

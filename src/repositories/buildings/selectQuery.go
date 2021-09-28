@@ -2,8 +2,8 @@ package buildings
 
 import (
 	"context"
-	"ugc_test_task/src/models"
-	"ugc_test_task/src/pg"
+	"github.com/pretcat/ugc_test_task/src/models"
+	"github.com/pretcat/ugc_test_task/src/pg"
 
 	sql "github.com/huandu/go-sqlbuilder"
 )

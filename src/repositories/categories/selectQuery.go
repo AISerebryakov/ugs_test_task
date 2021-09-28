@@ -3,9 +3,9 @@ package categories
 import (
 	"context"
 	"fmt"
-	"ugc_test_task/src/errors"
-	"ugc_test_task/src/models"
-	"ugc_test_task/src/pg"
+	"github.com/pretcat/ugc_test_task/src/errors"
+	"github.com/pretcat/ugc_test_task/src/models"
+	"github.com/pretcat/ugc_test_task/src/pg"
 
 	sql "github.com/huandu/go-sqlbuilder"
 )

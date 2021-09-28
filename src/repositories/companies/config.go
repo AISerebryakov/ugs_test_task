@@ -1,8 +1,8 @@
 package companies
 
 import (
-	"ugc_test_task/src/pg"
-	"ugc_test_task/src/repositories/categories"
+	"github.com/pretcat/ugc_test_task/src/pg"
+	"github.com/pretcat/ugc_test_task/src/repositories/categories"
 )
 
 type Config struct {

@@ -7,16 +7,16 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"ugc_test_task/src/config"
-	"ugc_test_task/src/http"
-	"ugc_test_task/src/logger"
-	buildmng "ugc_test_task/src/managers/buildings"
-	categmng "ugc_test_task/src/managers/categories"
-	companmng "ugc_test_task/src/managers/companies"
-	"ugc_test_task/src/pg"
-	buildrepos "ugc_test_task/src/repositories/buildings"
-	categrepos "ugc_test_task/src/repositories/categories"
-	companrepos "ugc_test_task/src/repositories/companies"
+	"github.com/pretcat/ugc_test_task/src/config"
+	"github.com/pretcat/ugc_test_task/src/http"
+	"github.com/pretcat/ugc_test_task/src/logger"
+	buildmng "github.com/pretcat/ugc_test_task/src/managers/buildings"
+	categmng "github.com/pretcat/ugc_test_task/src/managers/categories"
+	companmng "github.com/pretcat/ugc_test_task/src/managers/companies"
+	"github.com/pretcat/ugc_test_task/src/pg"
+	buildrepos "github.com/pretcat/ugc_test_task/src/repositories/buildings"
+	categrepos "github.com/pretcat/ugc_test_task/src/repositories/categories"
+	companrepos "github.com/pretcat/ugc_test_task/src/repositories/companies"
 )
 
 var (
@@ -30,7 +30,9 @@ var (
 	buildingMng buildmng.Manager
 	categoryMng categmng.Manager
 
-	httpApi http.Api
+	httpApi *http.Api
+
+	shutdownServiceTimeout = 5 * time.Second
 )
 
 func main() {
@@ -72,6 +74,7 @@ func main() {
 	}
 	httpApi.Start(func(err error) {
 		logger.Msg("error while start http api").Error(err.Error())
+		shutdownService()
 		os.Exit(1)
 	})
 	handleOsSignals()
@@ -145,17 +148,24 @@ func handleOsSignals() {
 	signal.Notify(osSignals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	for {
 		<-osSignals
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		httpApi.Shutdown(ctx)
-		if err := buildingRepos.Stop(ctx); err != nil {
-			logger.Msg("shutdown 'building' repository").Error(err.Error())
-		}
-		if err := categoryRepos.Stop(ctx); err != nil {
-			logger.Msg("shutdown 'category' repository").Error(err.Error())
-		}
-		if err := companyRepos.Stop(ctx); err != nil {
-			logger.Msg("shutdown 'company' repository").Error(err.Error())
-		}
-		cancel()
+		shutdownService()
 	}
+}
+
+func shutdownService() {
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownServiceTimeout)
+	defer cancel()
+	httpApi.Shutdown(ctx)
+	if err := buildingRepos.Stop(ctx); err != nil {
+		logger.Msg("shutdown 'building' repository").Error(err.Error())
+	}
+	logger.Info("shutdown 'building' repository")
+	if err := categoryRepos.Stop(ctx); err != nil {
+		logger.Msg("shutdown 'category' repository").Error(err.Error())
+	}
+	logger.Info("shutdown 'category' repository")
+	if err := companyRepos.Stop(ctx); err != nil {
+		logger.Msg("shutdown 'company' repository").Error(err.Error())
+	}
+	logger.Info("shutdown 'company' repository")
 }

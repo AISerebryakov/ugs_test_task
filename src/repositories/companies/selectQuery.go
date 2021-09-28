@@ -3,10 +3,10 @@ package companies
 import (
 	"context"
 	"fmt"
-	"ugc_test_task/src/errors"
-	"ugc_test_task/src/models"
-	"ugc_test_task/src/pg"
-	categrepos "ugc_test_task/src/repositories/categories"
+	"github.com/pretcat/ugc_test_task/src/errors"
+	"github.com/pretcat/ugc_test_task/src/models"
+	"github.com/pretcat/ugc_test_task/src/pg"
+	categrepos "github.com/pretcat/ugc_test_task/src/repositories/categories"
 
 	"github.com/jackc/pgx/v4"
 

@@ -2,7 +2,7 @@ package models
 
 import (
 	"fmt"
-	"ugc_test_task/src/common"
+	"github.com/pretcat/ugc_test_task/src/common"
 
 	"github.com/google/uuid"
 )

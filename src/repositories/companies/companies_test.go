@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"ugc_test_task/src/common"
-	"ugc_test_task/src/models"
+	"github.com/pretcat/ugc_test_task/src/common"
+	"github.com/pretcat/ugc_test_task/src/models"
 
 	"github.com/google/uuid"
 

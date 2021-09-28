@@ -1,7 +1,7 @@
 package companies
 
 import (
-	"ugc_test_task/src/repositories/companies"
+	"github.com/pretcat/ugc_test_task/src/repositories/companies"
 )
 
 //type CompanySelectQuery interface {

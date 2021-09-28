@@ -2,7 +2,7 @@ package http
 
 import (
 	"net/http"
-	"ugc_test_task/src/logger"
+	"github.com/pretcat/ugc_test_task/src/logger"
 
 	"github.com/francoispqt/gojay"
 )

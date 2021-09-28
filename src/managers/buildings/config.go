@@ -2,7 +2,7 @@ package buildings
 
 import (
 	"errors"
-	buildrepos "ugc_test_task/src/repositories/buildings"
+	buildrepos "github.com/pretcat/ugc_test_task/src/repositories/buildings"
 )
 
 type Config struct {

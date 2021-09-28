@@ -3,7 +3,7 @@ package companies
 import (
 	"encoding/json"
 	"fmt"
-	"ugc_test_task/src/models"
+	"github.com/pretcat/ugc_test_task/src/models"
 
 	"github.com/nyaruka/phonenumbers"
 )

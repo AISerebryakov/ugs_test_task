@@ -2,11 +2,11 @@ package http
 
 import (
 	"fmt"
-	config2 "ugc_test_task/src/config"
-	"ugc_test_task/src/managers/buildings"
-	"ugc_test_task/src/managers/categories"
-	"ugc_test_task/src/managers/companies"
-	"ugc_test_task/src/models"
+	config2 "github.com/pretcat/ugc_test_task/src/config"
+	"github.com/pretcat/ugc_test_task/src/managers/buildings"
+	"github.com/pretcat/ugc_test_task/src/managers/categories"
+	"github.com/pretcat/ugc_test_task/src/managers/companies"
+	"github.com/pretcat/ugc_test_task/src/models"
 )
 
 type CompanyManager interface {
