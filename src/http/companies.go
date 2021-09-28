@@ -12,10 +12,6 @@ import (
 	"ugc_test_task/src/models"
 )
 
-const (
-	companiesPath = "/v1/companies"
-)
-
 func (api Api) companyHandlers(res *Response, req Request) {
 	switch req.Method {
 	case http.MethodPost:

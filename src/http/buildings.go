@@ -12,10 +12,6 @@ import (
 	"ugc_test_task/src/models"
 )
 
-const (
-	buildingsPath = "/v1/buildings"
-)
-
 func (api Api) buildingHandlers(res *Response, req Request) {
 	switch req.Method {
 	case http.MethodPost:

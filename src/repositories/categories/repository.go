@@ -85,3 +85,18 @@ func (r Repository) Insert(ctx context.Context, category models.Category) error 
 func (r Repository) IsEmpty() bool {
 	return r.client.IsEmpty()
 }
+
+func (r Repository) Stop(ctx context.Context) (err error) {
+	ch := make(chan bool)
+	defer close(ch)
+	go func() {
+		r.client.Close()
+		ch <- true
+	}()
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}

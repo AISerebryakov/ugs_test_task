@@ -94,12 +94,6 @@ func (r Repository) createCompanyIndexes() error {
 	return nil
 }
 
-// Stop todo: add gracefully shutdown
-func (r Repository) Stop() {
-	r.client.Close()
-
-}
-
 func (r Repository) createCompaniesTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
 		Define(models.IdKey, "uuid", "primary key", "not null").
@@ -193,4 +187,19 @@ func (r Repository) DeleteCompanyById(ctx context.Context, id string) (err error
 		return pg.NewError(err)
 	}
 	return nil
+}
+
+func (r Repository) Stop(ctx context.Context) (err error) {
+	ch := make(chan bool)
+	defer close(ch)
+	go func() {
+		r.client.Close()
+		ch <- true
+	}()
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

@@ -13,12 +13,6 @@ import (
 	"ugc_test_task/src/models"
 )
 
-const (
-	SearchByNameKey = "search_by_name"
-
-	categoriesPath = "/v1/categories"
-)
-
 func (api Api) categoriesHandlers(res *Response, req Request) {
 	switch req.Method {
 	case http.MethodPost:

@@ -19,9 +19,9 @@ type Response struct {
 	rw         http.ResponseWriter
 	statusCode int
 	reqId      string
-	data gojay.EmbeddedJSON
-	err  Error
-	warn Warning
+	data       gojay.EmbeddedJSON
+	err        Error
+	warn       Warning
 }
 
 func NewResponse(rw http.ResponseWriter, reqId string) *Response {
@@ -58,6 +58,10 @@ func (res *Response) SetWarning(warn Warning) {
 
 func (res Response) Error() Error {
 	return res.err
+}
+
+func (res Response) Warning() Warning {
+	return res.warn
 }
 
 func (res *Response) WriteBody() {

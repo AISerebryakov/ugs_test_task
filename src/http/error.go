@@ -2,8 +2,8 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 	"ugc_test_task/src/errors"
-	"ugc_test_task/src/managers"
 
 	"github.com/francoispqt/gojay"
 )
@@ -40,28 +40,13 @@ type Error struct {
 func NewApiError(err error) Error {
 	errType := errors.GetType(err)
 	switch errType {
-	case errors.QueryIsInvalid:
-		return NewIncorrectRequestError(err.Error())
-	case errors.QueryParseErr:
-		return NewIncorrectRequestError(err.Error())
-	case errors.BodyReadErr:
-		return NewIncorrectRequestError(err.Error())
-	case errors.BodyIsEmpty:
-		return NewIncorrectRequestError(err.Error())
-	case errors.Duplicate:
-		return NewIncorrectRequestError(err.Error())
-	case errors.InputParamsIsInvalid:
+	case errors.QueryIsInvalid, errors.QueryParseErr,
+		errors.BodyReadErr, errors.BodyIsEmpty,
+		errors.Duplicate, errors.InputParamsIsInvalid:
 		return NewIncorrectRequestError(err.Error())
 	default:
 		return NewInternalServerError(err.Error())
 	}
-}
-
-func matchManagerErrors(err error) (Error, bool) {
-	if errors.Is(err, managers.ErrSaveToDb) {
-		return NewInternalServerError(managers.ErrSaveToDb.Error()), true
-	}
-	return Error{}, false
 }
 
 func NewIncorrectRequestError(msg string) Error {
@@ -90,6 +75,10 @@ func NewEncodingJsonError(msg string) Error {
 
 func (err Error) Error() string {
 	return err.msg
+}
+
+func (err Error) String() string {
+	return strconv.Itoa(err.httpCode) + " " + err.title + " " + err.msg
 }
 
 func (err Error) IsEmpty() bool {

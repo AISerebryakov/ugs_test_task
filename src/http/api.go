@@ -1,9 +1,15 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
+	"ugc_test_task/src/errors"
 	"ugc_test_task/src/logger"
+
+	"github.com/arl/statsviz"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -15,16 +21,23 @@ const (
 	maxGettingObjects = 200
 )
 
-type handler struct {
-	Api
-}
+var (
+	newRequestLogStr = func(method, path string) string {
+		return fmt.Sprintf("new http request: %s %s", method, path)
+	}
+	finalRequestLogStr = func(method, path string) string {
+		return fmt.Sprintf("final http request: %s %s", method, path)
+	}
+)
 
 type Api struct {
-	server      *http.Server
-	conf        Config
-	companyMng  CompanyManager
-	buildingMng BuildingManager
-	categoryMng CategoryManager
+	server        *http.Server
+	debugServer   *http.Server
+	metricsServer *http.Server
+	conf          Config
+	companyMng    CompanyManager
+	buildingMng   BuildingManager
+	categoryMng   CategoryManager
 }
 
 func NewApi(conf Config) (api Api) {
@@ -36,14 +49,49 @@ func NewApi(conf Config) (api Api) {
 }
 
 func (api Api) Start(f func(error)) {
-	if err := api.startServer(); err != nil {
-		f(fmt.Errorf("start http server: %v", err))
-	}
+	go func() {
+		if err := api.startMetricsServer(); err != nil {
+			f(fmt.Errorf("start metrics http server: %v", err))
+		}
+	}()
+	go func() {
+		if err := api.startDebugServer(); err != nil {
+			f(fmt.Errorf("start debug http server: %v", err))
+		}
+	}()
+	go func() {
+		if err := api.startServer(); err != nil {
+			f(fmt.Errorf("start http server: %v", err))
+		}
+	}()
 }
 
-//todo: add metrics server
-//todo: add debug server
-//todo: add max objects for getting
+func (api *Api) Shutdown(ctx context.Context) {
+	if api.server != nil {
+		go func() {
+			if err := api.server.Shutdown(ctx); err != nil {
+				logger.Errorf("api http server shutdown: %v", err)
+			}
+			logger.Info("api http server shutdown")
+		}()
+	}
+	if api.metricsServer != nil {
+		go func() {
+			if err := api.metricsServer.Shutdown(ctx); err != nil {
+				logger.Errorf("http metrics server graceful shutdown: %v", err)
+			}
+			logger.Info("http metrics server graceful shutdown")
+		}()
+	}
+	if api.debugServer != nil {
+		go func() {
+			if err := api.debugServer.Shutdown(ctx); err != nil {
+				logger.Errorf("debug http server shutdown: %v", err)
+			}
+			logger.Info("debug http server shutdown")
+		}()
+	}
+}
 
 func (api *Api) startServer() error {
 	if err := api.conf.Validate(); err != nil {
@@ -52,7 +100,7 @@ func (api *Api) startServer() error {
 	conf := api.conf
 	api.server = &http.Server{
 		Addr:              conf.Address(),
-		Handler:           handler{*api},
+		Handler:           api,
 		ReadTimeout:       conf.ReadTimeout.TimeDuration(),
 		ReadHeaderTimeout: conf.ReadHeaderTimeout.TimeDuration(),
 		WriteTimeout:      conf.WriteTimeout.TimeDuration(),
@@ -61,27 +109,86 @@ func (api *Api) startServer() error {
 	}
 	logger.Msg("start http server").Info(conf.Address())
 	if err := api.server.ListenAndServe(); err != nil {
-		//todo: handle error
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
 		return err
 	}
 	return nil
 }
 
-func (h handler) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
+func (api *Api) startMetricsServer() error {
+	if len(api.conf.MetricsPort) == 0 {
+		return nil
+	}
+	handler := http.NewServeMux()
+	handler.Handle("/metrics", promhttp.Handler())
+	api.metricsServer = &http.Server{
+		Addr:    api.conf.MetricsAddress(),
+		Handler: handler,
+	}
+	logger.Msg("start metrics http server").Info(api.conf.MetricsAddress())
+	if err := api.metricsServer.ListenAndServe(); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (api *Api) startDebugServer() error {
+	if len(api.conf.DebugPort) == 0 {
+		return nil
+	}
+	handler := http.NewServeMux()
+	handler.HandleFunc("/debug/pprof/", pprof.Index)
+	handler.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	handler.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	handler.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	handler.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	if err := statsviz.Register(handler); err != nil {
+		return fmt.Errorf("register handler for Statviz: %v", err)
+	}
+	api.debugServer = &http.Server{
+		Addr:    api.conf.DebugAddress(),
+		Handler: handler,
+	}
+	logger.Msg("start debug http server").Info(api.conf.DebugAddress())
+	if err := api.debugServer.ListenAndServe(); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (api Api) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 	req := NewRequest(httpReq)
 	res := NewResponse(rw, req.Id())
-	fmt.Println(req.Path())
+
+	logger.TraceId(req.Id()).Debug(newRequestLogStr(req.Method, req.Path()))
+	defer logger.TraceId(req.Id()).Debug(finalRequestLogStr(req.Method, req.Path()))
 
 	switch req.Path() {
-	case companiesPath:
-		h.companyHandlers(res, req)
-	case buildingsPath:
-		h.buildingHandlers(res, req)
-	case categoriesPath:
-		h.categoriesHandlers(res, req)
+	case "/v1/healthcheck":
+		if req.Method != http.MethodGet {
+			res.rw.WriteHeader(http.StatusOK)
+			return
+		}
+	case "/v1/companies":
+		api.companyHandlers(res, req)
+	case "/v1/buildings":
+		api.buildingHandlers(res, req)
+	case "/v1/categories":
+		api.categoriesHandlers(res, req)
 	}
 	if !res.err.IsEmpty() {
-		logger.TraceId(req.Id()).Error(res.Error().Error())
+		logger.TraceId(req.Id()).Error(res.Error().String())
+	}
+	if !res.warn.IsEmpty() {
+		logger.TraceId(req.Id()).Info(res.Warning().String())
 	}
 	res.writeHeaders()
 	res.WriteBody()

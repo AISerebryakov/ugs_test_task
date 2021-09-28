@@ -41,3 +41,7 @@ func (warn Warning) MarshalJSONObject(enc *gojay.Encoder) {
 func (warn Warning) IsNil() bool {
 	return warn.IsEmpty()
 }
+
+func (warn Warning) String() string {
+	return warn.title + " " + warn.msg
+}

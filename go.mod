@@ -3,6 +3,7 @@ module ugc_test_task
 go 1.16
 
 require (
+	github.com/arl/statsviz v0.4.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/francoispqt/gojay v1.2.13
 	github.com/google/uuid v1.3.0
@@ -12,6 +13,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/nyaruka/phonenumbers v1.0.71
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/prometheus/client_golang v0.8.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.19.1
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect

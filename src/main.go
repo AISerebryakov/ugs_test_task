@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 	"ugc_test_task/src/config"
 	"ugc_test_task/src/http"
 	"ugc_test_task/src/logger"
@@ -25,6 +29,8 @@ var (
 	companyMng  companmng.Manager
 	buildingMng buildmng.Manager
 	categoryMng categmng.Manager
+
+	httpApi http.Api
 )
 
 func main() {
@@ -46,7 +52,7 @@ func main() {
 		logger.Msg("error while init managers").Error(err.Error())
 		os.Exit(1)
 	}
-	httpApi := http.NewApi(http.Config{
+	httpApi = http.NewApi(http.Config{
 		Host:              conf.HttpServer.Host,
 		Port:              conf.HttpServer.Port,
 		MetricsPort:       conf.HttpServer.MetricsPort,
@@ -64,10 +70,11 @@ func main() {
 		logger.Msg("error while creating http api").Error(err.Error())
 		os.Exit(1)
 	}
-	//todo: handle error
 	httpApi.Start(func(err error) {
 		logger.Msg("error while start http api").Error(err.Error())
+		os.Exit(1)
 	})
+	handleOsSignals()
 }
 
 func initLogger() (err error) {
@@ -130,4 +137,25 @@ func initManagers() (err error) {
 		return fmt.Errorf("error while creating category manager: %v", err)
 	}
 	return nil
+}
+
+func handleOsSignals() {
+	osSignals := make(chan os.Signal)
+	defer close(osSignals)
+	signal.Notify(osSignals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	for {
+		<-osSignals
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		httpApi.Shutdown(ctx)
+		if err := buildingRepos.Stop(ctx); err != nil {
+			logger.Msg("shutdown 'building' repository").Error(err.Error())
+		}
+		if err := categoryRepos.Stop(ctx); err != nil {
+			logger.Msg("shutdown 'category' repository").Error(err.Error())
+		}
+		if err := companyRepos.Stop(ctx); err != nil {
+			logger.Msg("shutdown 'company' repository").Error(err.Error())
+		}
+		cancel()
+	}
 }
