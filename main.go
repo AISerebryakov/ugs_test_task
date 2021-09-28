@@ -69,10 +69,6 @@ func main() {
 		BuildingManager:   buildingMng,
 		CategoryManager:   categoryMng,
 	})
-	if err != nil {
-		logger.Msg("error while creating http api").Error(err.Error())
-		os.Exit(1)
-	}
 	httpApi.Start(func(err error) {
 		logger.Msg("error while start http api").Error(err.Error())
 		shutdownService()

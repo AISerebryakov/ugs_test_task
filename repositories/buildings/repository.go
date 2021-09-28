@@ -3,10 +3,11 @@ package buildings
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
 	"github.com/pretcat/ugc_test_task/pg"
-	"time"
 
 	sql "github.com/huandu/go-sqlbuilder"
 )
@@ -39,6 +40,8 @@ func New(conf Config) (r Repository, err error) {
 	}
 	return r, nil
 }
+
+//todo: create db
 
 func (r Repository) createTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
