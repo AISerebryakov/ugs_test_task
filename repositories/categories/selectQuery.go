@@ -3,7 +3,9 @@ package categories
 import (
 	"context"
 	"fmt"
+
 	sql "github.com/huandu/go-sqlbuilder"
+	"github.com/jackc/pgx/v4"
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
 	"github.com/pretcat/ugc_test_task/pg"
@@ -11,9 +13,9 @@ import (
 
 type SelectQuery struct {
 	ctx      context.Context
-	err    error
-	client pg.Client
-	id     string
+	err      error
+	client   pg.Client
+	id       string
 	name     string
 	names    []string
 	limit    int
@@ -92,6 +94,27 @@ func (query *SelectQuery) WithSort() *SelectQuery {
 	}
 	query.withSort = true
 	return query
+}
+
+func (query *SelectQuery) One() (models.Category, bool, error) {
+	if query.err != nil {
+		return models.Category{}, false, query.err
+	}
+	query.Limit(1)
+	sqlStr, args, err := query.build()
+	if err != nil {
+		return models.Category{}, false, errors.Wrap(err, "building sql query")
+	}
+	row := query.client.QueryRow(query.ctx, sqlStr, args...)
+	category := models.Category{}
+	if err = row.Scan(&category.Id, &category.Name, &category.CreateAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Category{}, false, nil
+		}
+		return models.Category{}, false, pg.NewError(err)
+	}
+
+	return category, true, nil
 }
 
 func (query *SelectQuery) Iter(callback func(models.Category) error) error {

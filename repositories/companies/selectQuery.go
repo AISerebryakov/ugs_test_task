@@ -3,6 +3,7 @@ package companies
 import (
 	"context"
 	"fmt"
+
 	sql "github.com/huandu/go-sqlbuilder"
 	"github.com/jackc/pgx/v4"
 	"github.com/pretcat/ugc_test_task/errors"
@@ -13,9 +14,9 @@ import (
 
 type SelectQuery struct {
 	ctx        context.Context
-	err    error
-	client pg.Client
-	id     string
+	err        error
+	client     pg.Client
+	id         string
 	buildingId string
 	category   string
 	limit      int
@@ -114,14 +115,15 @@ func (query *SelectQuery) One() (models.Company, bool, error) {
 		return models.Company{}, false, errors.Wrap(err, "building sql query")
 	}
 	row := query.client.QueryRow(query.ctx, sqlStr, args...)
-	if err = row.Scan(); err != nil {
+	company := models.Company{}
+	if err = row.Scan(&company.Id, &company.Name, &company.CreateAt, &company.BuildingId, &company.Address, &company.PhoneNumbers, &company.Categories); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Company{}, false, nil
 		}
 		return models.Company{}, false, pg.NewError(err)
 	}
 
-	return models.Company{}, true, nil
+	return company, true, nil
 }
 
 func (query *SelectQuery) Iter(callback func(models.Company) error) error {

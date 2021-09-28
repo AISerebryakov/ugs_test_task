@@ -3,6 +3,9 @@ package buildings
 import (
 	"context"
 
+	"github.com/jackc/pgx/v4"
+	"github.com/pretcat/ugc_test_task/errors"
+
 	sql "github.com/huandu/go-sqlbuilder"
 	"github.com/pretcat/ugc_test_task/models"
 	"github.com/pretcat/ugc_test_task/pg"
@@ -78,6 +81,23 @@ func (query *SelectQuery) WithSort() *SelectQuery {
 	}
 	query.withSort = true
 	return query
+}
+
+func (query *SelectQuery) One() (models.Building, bool, error) {
+	if query.err != nil {
+		return models.Building{}, false, query.err
+	}
+	query.Limit(1)
+	sqlStr, args := query.build()
+	row := query.client.QueryRow(query.ctx, sqlStr, args...)
+	building := models.Building{}
+	if err := row.Scan(&building.Id, &building.CreateAt, &building.Address, &building.Location); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Building{}, false, nil
+		}
+		return models.Building{}, false, pg.NewError(err)
+	}
+	return building, true, nil
 }
 
 func (query *SelectQuery) Iter(callback func(models.Building) error) error {
