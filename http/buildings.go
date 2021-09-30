@@ -2,14 +2,16 @@ package http
 
 import (
 	"encoding/json"
-	"github.com/pretcat/ugc_test_task/errors"
-	"github.com/pretcat/ugc_test_task/logger"
-	"github.com/pretcat/ugc_test_task/managers"
-	buildings2 "github.com/pretcat/ugc_test_task/managers/buildings"
-	"github.com/pretcat/ugc_test_task/models"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+
+	"github.com/pretcat/ugc_test_task/errors"
+	"github.com/pretcat/ugc_test_task/logger"
+	"github.com/pretcat/ugc_test_task/managers"
+	buildmng "github.com/pretcat/ugc_test_task/managers/buildings"
+	"github.com/pretcat/ugc_test_task/models"
 )
 
 func (api Api) buildingHandlers(res *Response, req Request) {
@@ -23,6 +25,7 @@ func (api Api) buildingHandlers(res *Response, req Request) {
 
 func (api Api) getBuildings(res *Response, req Request) {
 	query := newGetBuildingsQuery(req)
+	logger.TraceId(req.Id()).AddMsg("query").Debug(fmt.Sprintf("%#v", query))
 	buildings := make([]models.Building, 0)
 	objectCounter := 0
 	err := api.buildingMng.GetBuildings(query, func(building models.Building) error {
@@ -72,28 +75,30 @@ func (api Api) addBuilding(res *Response, req Request) {
 	res.SetData(jsonData)
 }
 
-func newGetBuildingsQuery(req Request) (query buildings2.GetQuery) {
+func newGetBuildingsQuery(req Request) (query buildmng.GetQuery) {
 	urlQuery := req.URL.Query()
-	query.ReqId = req.Id()
+	query.TraceId = req.Id()
 	query.Id = urlQuery.Get(models.IdKey)
 	query.Address = urlQuery.Get(models.AddressKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
+	query.Offset, _ = strconv.Atoi(urlQuery.Get(OffsetKey))
+	query.Ascending.Exists, query.Ascending.Value = parseAscending(urlQuery)
 	query.Limit = parseLimit(urlQuery)
 	return query
 }
 
-func newAddBuildingQuery(req Request) (buildings2.AddQuery, error) {
+func newAddBuildingQuery(req Request) (buildmng.AddQuery, error) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return buildings2.AddQuery{}, errors.BodyReadErr.New(err.Error())
+		return buildmng.AddQuery{}, errors.BodyReadErr.New(err.Error())
 	}
 	if len(body) == 0 {
-		return buildings2.AddQuery{}, errors.BodyIsEmpty.New("")
+		return buildmng.AddQuery{}, errors.BodyIsEmpty.New("")
 	}
-	query, err := buildings2.NewAddQueryFromJson(body)
+	query, err := buildmng.NewAddQueryFromJson(body)
 	if err != nil {
-		return buildings2.AddQuery{}, errors.QueryParseErr.New(err.Error())
+		return buildmng.AddQuery{}, errors.QueryParseErr.New(err.Error())
 	}
 	query.ReqId = req.Id()
 	return query, nil

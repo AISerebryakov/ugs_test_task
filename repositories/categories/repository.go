@@ -3,10 +3,11 @@ package categories
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
 	"github.com/pretcat/ugc_test_task/pg"
-	"time"
 
 	sql "github.com/huandu/go-sqlbuilder"
 )
@@ -45,9 +46,9 @@ func New(conf Config) (r Repository, err error) {
 
 func (r Repository) createTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
-		Define(models.IdKey, "uuid", "primary key", "not null").
-		Define(models.NameKey, "ltree", fmt.Sprintf("check (%s != '')", models.NameKey)).
-		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).String()
+		Define(models.IdKey, "uuid", "primary key").
+		Define(models.NameKey, "ltree", fmt.Sprintf("check(%s != '')", models.NameKey), "unique", "not null").
+		Define(models.CreateAt, "bigint", fmt.Sprintf("check(%s > 0)", models.CreateAt), "not null").String()
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {
 		return err

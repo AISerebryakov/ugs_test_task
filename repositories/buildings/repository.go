@@ -45,9 +45,9 @@ func New(conf Config) (r Repository, err error) {
 
 func (r Repository) createTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
-		Define(models.IdKey, "uuid", "primary key", "not null").
-		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).
-		Define(models.AddressKey, "varchar(200)", "not null").
+		Define(models.IdKey, "uuid", "primary key").
+		Define(models.CreateAt, "bigint", fmt.Sprintf("check(%s > 0)", models.CreateAt), "not null").
+		Define(models.AddressKey, "varchar(200)", fmt.Sprintf("check (%s != '')", models.AddressKey), "not null").
 		Define(models.LocationKey, "jsonb", "not null").String()
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {

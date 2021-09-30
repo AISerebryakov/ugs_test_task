@@ -24,10 +24,10 @@ var (
 
 func (r Repository) createCategoryCompaniesTable() error {
 	s := sql.CreateTable(CategoryCompaniesTableName).IfNotExists().
-		Define(CategoryIdKey, "uuid", fmt.Sprintf("references %s", categrepos.TableName), "not null").
-		Define(CompanyIdKey, "uuid", fmt.Sprintf("references %s", TableName), "on delete cascade", "not null").
-		Define(CategoryNameKey, "ltree", fmt.Sprintf("check (%s != '')", CategoryNameKey)).
-		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).
+		Define(CategoryIdKey, "uuid", "references "+categrepos.TableName).
+		Define(CompanyIdKey, "uuid", "references "+TableName, "on delete cascade").
+		Define(CategoryNameKey, "ltree", fmt.Sprintf("check(%s != '')", CategoryNameKey), "not null").
+		Define(models.CreateAt, "bigint", fmt.Sprintf("check(%s > 0)", models.CreateAt), "not null").
 		Define(fmt.Sprintf("primary key (%s, %s)", CategoryIdKey, CompanyIdKey)).String()
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {

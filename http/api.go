@@ -3,12 +3,13 @@ package http
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/pprof"
+
 	"github.com/arl/statsviz"
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
-	"net/http/pprof"
 )
 
 const (
@@ -16,6 +17,8 @@ const (
 	ApplicationJsonKey = "application/json"
 	ContentTypeKey     = "Content-Type"
 	LimitKey           = "limit"
+	OffsetKey          = "offset"
+	AscendingKey       = "ascending"
 
 	maxGettingObjects = 200
 )

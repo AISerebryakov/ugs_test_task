@@ -3,12 +3,13 @@ package companies
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
 	"github.com/pretcat/ugc_test_task/pg"
 	buildrepos "github.com/pretcat/ugc_test_task/repositories/buildings"
 	categrepos "github.com/pretcat/ugc_test_task/repositories/categories"
-	"time"
 
 	"github.com/jackc/pgx/v4"
 
@@ -96,12 +97,12 @@ func (r Repository) createCompanyIndexes() error {
 
 func (r Repository) createCompaniesTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
-		Define(models.IdKey, "uuid", "primary key", "not null").
+		Define(models.IdKey, "uuid", "primary key").
 		Define(models.NameKey, "varchar(200)", "not null").
-		Define(models.CreateAt, "bigint", fmt.Sprintf("check (%s > 0)", models.CreateAt)).
+		Define(models.CreateAt, "bigint", fmt.Sprintf("check(%s > 0)", models.CreateAt), "not null").
 		Define(models.BuildingIdKey, "uuid", "references "+buildrepos.TableName, "not null").
-		Define(models.AddressKey, "varchar(200)", "not null").
-		Define(models.PhoneNumbersKey, "varchar(50)[]").String()
+		Define(models.AddressKey, "varchar(200)", fmt.Sprintf("check (%s != '')", models.AddressKey), "not null").
+		Define(models.PhoneNumbersKey, "varchar(50)[]", fmt.Sprintf("check(array_length(%s, 1) > 0)", models.PhoneNumbersKey), "not null").String()
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {
 		return err

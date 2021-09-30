@@ -3,8 +3,6 @@ package http
 import (
 	"github.com/pretcat/ugc_test_task/common/random"
 	"net/http"
-	"net/url"
-	"strconv"
 )
 
 type Request struct {
@@ -34,10 +32,3 @@ func (req Request) Path() string {
 	return req.URL.Path
 }
 
-func parseLimit(query url.Values) int {
-	limit, _ := strconv.Atoi(query.Get(LimitKey))
-	if limit > maxGettingObjects || limit == 0 {
-		limit = maxGettingObjects
-	}
-	return limit
-}

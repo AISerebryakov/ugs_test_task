@@ -3,10 +3,11 @@ package buildings
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
 	buildrepos "github.com/pretcat/ugc_test_task/repositories/buildings"
-	"time"
 )
 
 const (
@@ -45,14 +46,17 @@ func (m Manager) AddBuilding(query AddQuery) (models.Building, error) {
 func (m Manager) GetBuildings(query GetQuery, callback func(models.Building) error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
-	reposQuery := m.buildRepos.Select(ctx).ById(query.Id)
-	if len(query.Id) == 0 && len(query.Address) > 0 {
-		reposQuery = reposQuery.ByAddress(query.Address)
+	reposQuery := m.buildRepos.Select(ctx).TraceId(query.TraceId).ById(query.Id)
+	if len(query.Id) == 0 {
+		if len(query.Address) > 0 {
+			reposQuery = reposQuery.ByAddress(query.Address)
+		}
+		reposQuery = reposQuery.Limit(query.Limit).Offset(query.Offset)
+		if query.Ascending.Exists {
+			reposQuery = reposQuery.Ascending(query.Ascending.Value)
+		}
 	}
-	reposQuery = reposQuery.ByAddress(query.Address).
-		FromDate(query.FromDate).
-		ToDate(query.ToDate).
-		Limit(query.Limit).WithSort()
+	reposQuery = reposQuery.FromDate(query.FromDate).ToDate(query.ToDate)
 	err := reposQuery.Iter(func(building models.Building) error {
 		if err := callback(building); err != nil {
 			return err
