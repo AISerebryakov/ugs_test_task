@@ -3,14 +3,15 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/logger"
 	"github.com/pretcat/ugc_test_task/managers"
 	categories2 "github.com/pretcat/ugc_test_task/managers/categories"
 	"github.com/pretcat/ugc_test_task/models"
-	"io"
-	"net/http"
-	"strconv"
 )
 
 func (api Api) categoriesHandlers(res *Response, req Request) {
@@ -25,7 +26,7 @@ func (api Api) categoriesHandlers(res *Response, req Request) {
 
 func (api Api) getCategories(res *Response, req Request) {
 	query := newGetCategoriesQuery(req)
-	fmt.Println("Query: ", query)
+	logger.TraceId(req.Id()).AddMsg("query").Debug(fmt.Sprintf("%#v", query))
 	categories := make([]models.Category, 0)
 	objectCounter := 0
 	err := api.categoryMng.GetCategories(query, func(category models.Category) error {
@@ -34,8 +35,6 @@ func (api Api) getCategories(res *Response, req Request) {
 		return nil
 	})
 	if err != nil {
-		//todo: handle error
-		//todo: add details to error
 		res.SetError(NewApiError(err))
 		return
 	}
@@ -53,8 +52,6 @@ func (api Api) getCategories(res *Response, req Request) {
 func (api Api) addCategory(res *Response, req Request) {
 	query, err := newAddCategoryQuery(req)
 	if err != nil {
-		//todo: handle error
-		//todo: add details to error
 		res.SetError(NewApiError(err))
 		return
 	}
@@ -75,11 +72,13 @@ func (api Api) addCategory(res *Response, req Request) {
 
 func newGetCategoriesQuery(req Request) (query categories2.GetQuery) {
 	urlQuery := req.URL.Query()
-	query.ReqId = req.Id()
+	query.TraceId = req.Id()
 	query.Id = urlQuery.Get(models.IdKey)
 	query.Name = urlQuery.Get(models.NameKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
+	query.Offset, _ = strconv.Atoi(urlQuery.Get(OffsetKey))
+	query.Ascending.Exists, query.Ascending.Value = parseAscending(urlQuery)
 	query.Limit = parseLimit(urlQuery)
 	return query
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pretcat/ugc_test_task/logger"
+
 	sql "github.com/huandu/go-sqlbuilder"
 	"github.com/jackc/pgx/v4"
 	"github.com/pretcat/ugc_test_task/errors"
@@ -12,16 +14,21 @@ import (
 )
 
 type SelectQuery struct {
-	ctx      context.Context
-	err      error
-	client   pg.Client
-	id       string
-	name     string
-	names    []string
-	limit    int
-	fromDate int64
-	toDate   int64
-	withSort bool
+	ctx       context.Context
+	err       error
+	client    pg.Client
+	traceId   string
+	id        string
+	name      string
+	names     []string
+	limit     int
+	offset    int
+	fromDate  int64
+	toDate    int64
+	ascending struct {
+		exists bool
+		value  bool
+	}
 }
 
 func (r Repository) Select(ctx context.Context) *SelectQuery {
@@ -42,6 +49,14 @@ func (query *SelectQuery) ById(id string) *SelectQuery {
 		return query
 	}
 	query.id = id
+	return query
+}
+
+func (query *SelectQuery) TraceId(id string) *SelectQuery {
+	if len(id) == 0 || query.err != nil {
+		return query
+	}
+	query.traceId = id
 	return query
 }
 
@@ -88,12 +103,41 @@ func (query *SelectQuery) Limit(limit int) *SelectQuery {
 	return query
 }
 
-func (query *SelectQuery) WithSort() *SelectQuery {
+func (query *SelectQuery) Ascending(asc bool) *SelectQuery {
 	if query.err != nil {
 		return query
 	}
-	query.withSort = true
+	query.ascending.exists = true
+	query.ascending.value = asc
 	return query
+}
+
+func (query *SelectQuery) Offset(offset int) *SelectQuery {
+	if query.err != nil {
+		return query
+	}
+	query.offset = offset
+	return query
+}
+
+func (query SelectQuery) Count() (count int, err error) {
+	query.ascending.exists = false
+	b := sql.Select("count(*)").From(TableName)
+	b, err = query.buildConditions(b)
+	if err != nil {
+		return 0, errors.Wrap(err, "building sql query")
+	}
+	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
+	logger.TraceId(query.traceId).AddMsg("sql for 'Count' query").Debug(sqlStr)
+	logger.TraceId(query.traceId).AddMsg("args for 'Count' query").Debug(fmt.Sprint(args))
+	row := query.client.QueryRow(query.ctx, sqlStr, args...)
+	if err := row.Scan(&count); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return count, nil
 }
 
 func (query *SelectQuery) One() (models.Category, bool, error) {
@@ -105,6 +149,8 @@ func (query *SelectQuery) One() (models.Category, bool, error) {
 	if err != nil {
 		return models.Category{}, false, errors.Wrap(err, "building sql query")
 	}
+	logger.TraceId(query.traceId).AddMsg("sql for 'One' query").Debug(sqlStr)
+	logger.TraceId(query.traceId).AddMsg("args for 'One' query").Debug(fmt.Sprint(args))
 	row := query.client.QueryRow(query.ctx, sqlStr, args...)
 	category := models.Category{}
 	if err = row.Scan(&category.Id, &category.Name, &category.CreateAt); err != nil {
@@ -125,6 +171,8 @@ func (query *SelectQuery) Iter(callback func(models.Category) error) error {
 	if err != nil {
 		return errors.Wrap(err, "building sql query")
 	}
+	logger.TraceId(query.traceId).AddMsg("sql for 'Iter' query").Debug(sqlStr)
+	logger.TraceId(query.traceId).AddMsg("args for 'Iter' query").Debug(fmt.Sprint(args))
 	rows, err := query.client.Query(query.ctx, sqlStr, args...)
 	if err != nil {
 		return pg.NewError(err)
@@ -151,12 +199,21 @@ func (query SelectQuery) String() string {
 	return sqlStr
 }
 
-func (query SelectQuery) build() (string, []interface{}, error) {
+func (query SelectQuery) build() (_ string, _ []interface{}, err error) {
 	b := sql.Select(categoryFields...).From(TableName)
+	b, err = query.buildConditions(b)
+	if err != nil {
+		return "", nil, err
+	}
+	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
+	return sqlStr, args, nil
+}
+
+func (query SelectQuery) buildConditions(b *sql.SelectBuilder) (*sql.SelectBuilder, error) {
 	if len(query.name) > 0 {
 		nameArgs := PrepareSearchByName(query.name)
 		if len(nameArgs) == 0 {
-			return "", nil, errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.NameKey))
+			return nil, errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.NameKey))
 		}
 		b = b.Where(models.NameKey + " @ " + b.Args.Add(nameArgs))
 	}
@@ -183,9 +240,15 @@ func (query SelectQuery) build() (string, []interface{}, error) {
 	if query.limit > 0 {
 		b = b.Limit(query.limit)
 	}
-	if query.withSort {
-		b = b.OrderBy(models.CreateAt).Asc()
+	if query.offset > 0 {
+		b = b.Offset(query.offset)
 	}
-	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
-	return sqlStr, args, nil
+	if query.ascending.exists {
+		if query.ascending.value {
+			b = b.OrderBy(models.CreateAt).Asc()
+		} else {
+			b = b.OrderBy(models.CreateAt).Desc()
+		}
+	}
+	return b, nil
 }

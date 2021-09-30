@@ -185,10 +185,10 @@ func (api *Api) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 		api.categoriesHandlers(res, req)
 	}
 	if !res.err.IsEmpty() {
-		logger.TraceId(req.Id()).Error(res.Error().String())
+		logger.TraceId(req.Id()).AddMsg("http error").Error(res.Error().String())
 	}
 	if !res.warn.IsEmpty() {
-		logger.TraceId(req.Id()).Info(res.Warning().String())
+		logger.TraceId(req.Id()).AddMsg("http warning").Info(res.Warning().String())
 	}
 	res.writeHeaders()
 	res.WriteBody()

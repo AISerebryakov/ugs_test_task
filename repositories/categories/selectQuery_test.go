@@ -9,19 +9,21 @@ import (
 
 func TestRepository_SelectQuery(t *testing.T) {
 	var testCases = []struct {
-		name       string
-		byId       string
-		byName     string
-		byNames    []string
-		limit      int
-		fromDate   int64
-		toDate     int64
-		withSort   bool
-		resultSql  string
-		resultArgs []interface{}
+		name            string
+		byId            string
+		byName          string
+		byNames         []string
+		ascendingExists bool
+		ascendingValue  bool
+		limit           int
+		offset          int
+		fromDate        int64
+		toDate          int64
+		resultSql       string
+		resultArgs      []interface{}
 	}{
-		{name: "ById", byId: "test_id", withSort: true, limit: 20,
-			resultSql:  "SELECT id, name, create_at FROM categories WHERE id = $1 ORDER BY create_at ASC LIMIT 20",
+		{name: "ById", byId: "test_id", ascendingExists: true, ascendingValue: true, limit: 20, offset: 4,
+			resultSql:  "SELECT id, name, create_at FROM categories WHERE id = $1 ORDER BY create_at ASC LIMIT 20 OFFSET 4",
 			resultArgs: []interface{}{"test_id"}},
 		{name: "ByName", byName: "test_name",
 			resultSql:  "SELECT id, name, create_at FROM categories WHERE name @ $1",
@@ -36,13 +38,13 @@ func TestRepository_SelectQuery(t *testing.T) {
 			resultSql:  "SELECT id, name, create_at FROM categories WHERE name IN ($1, $2) AND id = $3",
 			resultArgs: []interface{}{"test_name_1", "test_name_2", "test_id"}},
 
-		{name: "ByIdAndFromDate", byId: "test_id", fromDate: 7000, withSort: true, limit: 20,
-			resultSql:  "SELECT id, name, create_at FROM categories WHERE id = $1 AND create_at >= $2 ORDER BY create_at ASC LIMIT 20",
+		{name: "ByIdAndFromDate", byId: "test_id", fromDate: 7000, ascendingExists: true, ascendingValue: true, limit: 20, offset: 4,
+			resultSql:  "SELECT id, name, create_at FROM categories WHERE id = $1 AND create_at >= $2 ORDER BY create_at ASC LIMIT 20 OFFSET 4",
 			resultArgs: []interface{}{"test_id", int64(7000)}},
-		{name: "ByIdAndToDate", byId: "test_id", toDate: 9000, withSort: true, limit: 20,
-			resultSql:  "SELECT id, name, create_at FROM categories WHERE id = $1 AND create_at <= $2 ORDER BY create_at ASC LIMIT 20",
+		{name: "ByIdAndToDate", byId: "test_id", toDate: 9000, ascendingExists: true, ascendingValue: true, limit: 20, offset: 4,
+			resultSql:  "SELECT id, name, create_at FROM categories WHERE id = $1 AND create_at <= $2 ORDER BY create_at ASC LIMIT 20 OFFSET 4",
 			resultArgs: []interface{}{"test_id", int64(9000)}},
-		{name: "ByIdAndToAndFromDate", byId: "test_id", fromDate: 7000, toDate: 9000, withSort: true, limit: 20,
+		{name: "ByIdAndToAndFromDate", byId: "test_id", fromDate: 7000, toDate: 9000, ascendingExists: true, ascendingValue: true, limit: 20,
 			resultSql:  "SELECT id, name, create_at FROM categories WHERE id = $1 AND create_at >= $2 AND create_at <= $3 ORDER BY create_at ASC LIMIT 20",
 			resultArgs: []interface{}{"test_id", int64(7000), int64(9000)}},
 	}
@@ -50,9 +52,10 @@ func TestRepository_SelectQuery(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			query := newSelectQuery(context.Background()).
 				ById(tc.byId).ByName(tc.byName).ByNames(tc.byNames).
-				FromDate(tc.fromDate).ToDate(tc.toDate).Limit(tc.limit)
-			if tc.withSort {
-				query = query.WithSort()
+				FromDate(tc.fromDate).ToDate(tc.toDate).
+				Limit(tc.limit).Offset(tc.offset)
+			if tc.ascendingExists {
+				query = query.Ascending(tc.ascendingValue)
 			}
 			sqlStr, args, err := query.build()
 			assert.NoError(t, err, "building query")

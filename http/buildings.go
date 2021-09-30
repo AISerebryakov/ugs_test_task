@@ -34,8 +34,6 @@ func (api Api) getBuildings(res *Response, req Request) {
 		return nil
 	})
 	if err != nil {
-		//todo: handle error
-		//todo: add details to error
 		res.SetError(NewApiError(err))
 		return
 	}
@@ -55,8 +53,6 @@ func (api Api) getBuildings(res *Response, req Request) {
 func (api Api) addBuilding(res *Response, req Request) {
 	query, err := newAddBuildingQuery(req)
 	if err != nil {
-		//todo: handle error
-		//todo: add details to error
 		res.SetError(NewApiError(err))
 		return
 	}

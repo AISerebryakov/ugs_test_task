@@ -3,10 +3,11 @@ package categories
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
 	categrepos "github.com/pretcat/ugc_test_task/repositories/categories"
-	"time"
 )
 
 const (
@@ -44,12 +45,17 @@ func (m Manager) AddCategory(query AddQuery) (models.Category, error) {
 func (m Manager) GetCategories(query GetQuery, callback func(models.Category) error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
-	reposQuery := m.categoryRepos.Select(ctx).ById(query.Id)
-	if len(query.Name) > 0 && len(query.Id) == 0 {
-		reposQuery = reposQuery.ByName(query.Name)
+	reposQuery := m.categoryRepos.Select(ctx).TraceId(query.TraceId).ById(query.Id)
+	if len(query.Id) == 0 {
+		if len(query.Name) > 0 {
+			reposQuery = reposQuery.ByName(query.Name)
+		}
+		reposQuery = reposQuery.Limit(query.Limit).Offset(query.Offset)
+		if query.Ascending.Exists {
+			reposQuery = reposQuery.Ascending(query.Ascending.Value)
+		}
 	}
-	reposQuery = reposQuery.FromDate(query.FromDate).
-		ToDate(query.ToDate).Limit(query.Limit).WithSort()
+	reposQuery = reposQuery.FromDate(query.FromDate).ToDate(query.ToDate)
 	err := reposQuery.Iter(func(category models.Category) error {
 		if err := callback(category); err != nil {
 			return err
