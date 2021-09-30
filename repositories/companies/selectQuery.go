@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pretcat/ugc_test_task/logger"
+
 	sql "github.com/huandu/go-sqlbuilder"
 	"github.com/jackc/pgx/v4"
 	"github.com/pretcat/ugc_test_task/errors"
@@ -16,13 +18,18 @@ type SelectQuery struct {
 	ctx        context.Context
 	err        error
 	client     pg.Client
+	traceId    string
 	id         string
 	buildingId string
 	category   string
 	limit      int
+	offset     int
 	fromDate   int64
 	toDate     int64
-	withSort   bool
+	ascending  struct {
+		exists bool
+		value  bool
+	}
 }
 
 func (r Repository) Select(ctx context.Context) *SelectQuery {
@@ -46,6 +53,14 @@ func (query *SelectQuery) ById(id string) *SelectQuery {
 		return query
 	}
 	query.id = id
+	return query
+}
+
+func (query *SelectQuery) TraceId(id string) *SelectQuery {
+	if len(id) == 0 || query.err != nil {
+		return query
+	}
+	query.traceId = id
 	return query
 }
 
@@ -97,11 +112,20 @@ func (query *SelectQuery) Limit(limit int) *SelectQuery {
 	return query
 }
 
-func (query *SelectQuery) WithSort() *SelectQuery {
+func (query *SelectQuery) Ascending(asc bool) *SelectQuery {
 	if query.err != nil {
 		return query
 	}
-	query.withSort = true
+	query.ascending.exists = true
+	query.ascending.value = asc
+	return query
+}
+
+func (query *SelectQuery) Offset(offset int) *SelectQuery {
+	if query.err != nil {
+		return query
+	}
+	query.offset = offset
 	return query
 }
 
@@ -114,6 +138,8 @@ func (query *SelectQuery) One() (models.Company, bool, error) {
 	if err != nil {
 		return models.Company{}, false, errors.Wrap(err, "building sql query")
 	}
+	logger.TraceId(query.traceId).AddMsg("sql for 'One' query").Debug(sqlStr)
+	logger.TraceId(query.traceId).AddMsg("args for 'One' query").Debug(fmt.Sprint(args))
 	row := query.client.QueryRow(query.ctx, sqlStr, args...)
 	company := models.Company{}
 	if err = row.Scan(&company.Id, &company.Name, &company.CreateAt, &company.BuildingId, &company.Address, &company.PhoneNumbers, &company.Categories); err != nil {
@@ -134,6 +160,8 @@ func (query *SelectQuery) Iter(callback func(models.Company) error) error {
 	if err != nil {
 		return errors.Wrap(err, "building sql query")
 	}
+	logger.TraceId(query.traceId).AddMsg("sql for 'Iter' query").Debug(sqlStr)
+	logger.TraceId(query.traceId).AddMsg("args for 'Iter' query").Debug(fmt.Sprint(args))
 	rows, err := query.client.Query(query.ctx, sqlStr, args...)
 	if err != nil {
 		return pg.NewError(err)
@@ -180,8 +208,12 @@ func (query SelectQuery) build() (string, []interface{}, error) {
 	if query.limit > 0 {
 		b = b.Limit(query.limit)
 	}
-	if query.withSort {
-		b = b.OrderBy(models.CreateAt).Asc()
+	if query.ascending.exists {
+		if query.ascending.value {
+			b = b.OrderBy(models.CreateAt).Asc()
+		} else {
+			b = b.OrderBy(models.CreateAt).Desc()
+		}
 	}
 	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
 	return sqlStr, args, nil
@@ -205,8 +237,12 @@ func (query SelectQuery) buildWithCategory() (string, []interface{}, error) {
 	if query.limit > 0 {
 		b = b.Limit(query.limit)
 	}
-	if query.withSort {
-		b = b.OrderBy(models.CreateAt).Asc()
+	if query.ascending.exists {
+		if query.ascending.value {
+			b = b.OrderBy(models.CreateAt).Asc()
+		} else {
+			b = b.OrderBy(models.CreateAt).Desc()
+		}
 	}
 	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
 	return sqlStr, args, nil

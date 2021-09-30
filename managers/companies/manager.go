@@ -3,10 +3,11 @@ package companies
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
 	"github.com/pretcat/ugc_test_task/repositories/companies"
-	"time"
 )
 
 const (
@@ -49,14 +50,19 @@ func (m Manager) GetCompanies(query GetQuery, callback func(models.Company) erro
 	ctx, cancel := context.WithTimeout(context.Background(), opTimeout)
 	defer cancel()
 	reposQuery := m.companyRepos.Select(ctx).ById(query.Id)
-	if len(query.BuildingId) > 0 && len(query.Id) == 0 {
-		reposQuery = reposQuery.ByBuildingId(query.BuildingId)
+	if len(query.Id) == 0 {
+		if len(query.BuildingId) > 0 {
+			reposQuery = reposQuery.ByBuildingId(query.BuildingId)
+		}
+		if len(query.Category) > 0 && len(query.BuildingId) == 0 {
+			reposQuery = reposQuery.ByCategory(query.Category)
+		}
+		reposQuery = reposQuery.Limit(query.Limit).Offset(query.Offset)
+		if query.Ascending.Exists {
+			reposQuery = reposQuery.Ascending(query.Ascending.Value)
+		}
 	}
-	if len(query.Category) > 0 && len(query.BuildingId) == 0 && len(query.Id) == 0 {
-		reposQuery = reposQuery.ByCategory(query.Category)
-	}
-	reposQuery = reposQuery.FromDate(query.FromDate).
-		ToDate(query.ToDate).Limit(query.Limit).WithSort()
+	reposQuery = reposQuery.FromDate(query.FromDate).ToDate(query.ToDate)
 	err := reposQuery.Iter(func(company models.Company) error {
 		if err := callback(company); err != nil {
 			return err
