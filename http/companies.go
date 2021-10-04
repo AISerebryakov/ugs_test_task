@@ -53,8 +53,6 @@ func (api Api) getCompanies(res *Response, req Request) {
 func (api Api) addCompany(res *Response, req Request) {
 	query, err := newAddCompanyQuery(req)
 	if err != nil {
-		//todo: handle error
-		//todo: add details to error
 		res.SetError(NewApiError(err))
 		return
 	}
@@ -78,7 +76,7 @@ func newGetCompaniesQuery(req Request) (query companies.GetQuery) {
 	query.TraceId = req.Id()
 	query.Id = urlQuery.Get(models.IdKey)
 	query.BuildingId = urlQuery.Get(models.BuildingIdKey)
-	query.Category = urlQuery.Get(models.CategoriesKey)
+	query.Categories = urlQuery.Get(CategoryKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
 	query.Offset, _ = strconv.Atoi(urlQuery.Get(OffsetKey))

@@ -21,7 +21,7 @@ type SelectQuery struct {
 	traceId    string
 	id         string
 	buildingId string
-	category   string
+	categories string
 	limit      int
 	offset     int
 	fromDate   int64
@@ -48,7 +48,7 @@ func (query *SelectQuery) ById(id string) *SelectQuery {
 	if len(id) == 0 || query.err != nil {
 		return query
 	}
-	if len(query.category) > 0 {
+	if len(query.categories) > 0 {
 		query.err = fmt.Errorf("can't use '%s' with '%s'", models.IdKey, models.CategoriesKey)
 		return query
 	}
@@ -68,7 +68,7 @@ func (query *SelectQuery) ByBuildingId(id string) *SelectQuery {
 	if len(id) == 0 || query.err != nil {
 		return query
 	}
-	if len(query.category) > 0 {
+	if len(query.categories) > 0 {
 		query.err = fmt.Errorf("can't use '%s' with '%s'", models.BuildingIdKey, models.CategoriesKey)
 		return query
 	}
@@ -76,15 +76,15 @@ func (query *SelectQuery) ByBuildingId(id string) *SelectQuery {
 	return query
 }
 
-func (query *SelectQuery) ByCategory(category string) *SelectQuery {
-	if len(category) == 0 || query.err != nil {
+func (query *SelectQuery) ByCategories(categories string) *SelectQuery {
+	if len(categories) == 0 || query.err != nil {
 		return query
 	}
 	if len(query.id) > 0 || len(query.buildingId) > 0 {
 		query.err = fmt.Errorf("can't use '%s' with '%s' or '%s'", models.CategoriesKey, models.IdKey, models.BuildingIdKey)
 		return query
 	}
-	query.category = category
+	query.categories = categories
 	return query
 }
 
@@ -189,7 +189,7 @@ func (query SelectQuery) String() string {
 }
 
 func (query SelectQuery) build() (string, []interface{}, error) {
-	if len(query.category) > 0 {
+	if len(query.categories) > 0 {
 		return query.buildWithCategory()
 	}
 	b := sql.Select(companyFullFields...).From(FullViewName)
@@ -219,9 +219,25 @@ func (query SelectQuery) build() (string, []interface{}, error) {
 	return sqlStr, args, nil
 }
 
+//with company_id as (
+//select company_id from category_companies where string_to_array(lower(category_name), '.') @> '{"level_11"}'
+//),
+//category_names as (
+//select category_name from category_companies where company_id in (select company_id from company_id)
+//)
+//select id, name, companies.create_at, building_id, address, phone_numbers, array((select category_name from category_names)) as categories from companies
+//where id in (select company_id from company_id);
+
+func (query SelectQuery) b() {
+	categoriesArgs := categrepos.PrepareSearchByName(query.categories)
+	companyIdWithQuery := sql.Select(CompanyIdKey).From(CategoryCompaniesTableName)
+	companyIdWithQuery = companyIdWithQuery.Where(categoryNameGinIndexParam, "@> "+companyIdWithQuery.Var(categoriesArgs))
+
+}
+
 func (query SelectQuery) buildWithCategory() (string, []interface{}, error) {
 	b := sql.Select(companyFullFieldQuery...).From(CategoryCompaniesTableName)
-	categoriesArgs := categrepos.PrepareSearchByName(query.category)
+	categoriesArgs := categrepos.PrepareSearchByName(query.categories)
 	if len(categoriesArgs) == 0 {
 		return "", nil, errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.NameKey))
 	}

@@ -47,8 +47,8 @@ func (m Manager) GetCategories(query GetQuery, callback func(models.Category) er
 	defer cancel()
 	reposQuery := m.categoryRepos.Select(ctx).TraceId(query.TraceId).ById(query.Id)
 	if len(query.Id) == 0 {
-		if len(query.Name) > 0 {
-			reposQuery = reposQuery.ByName(query.Name)
+		if len(query.name) > 0 {
+			reposQuery = reposQuery.ByNameWithMode(query.name, query.getNameMode)
 		}
 		reposQuery = reposQuery.Limit(query.Limit).Offset(query.Offset)
 		if query.Ascending.Exists {

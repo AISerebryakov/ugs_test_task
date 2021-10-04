@@ -12,7 +12,7 @@ func TestRepository_SelectQuery(t *testing.T) {
 		name            string
 		byId            string
 		byName          string
-		byNames         []string
+		byIds           []string
 		ascendingExists bool
 		ascendingValue  bool
 		limit           int
@@ -28,13 +28,13 @@ func TestRepository_SelectQuery(t *testing.T) {
 		{name: "ByName", byName: "test_name",
 			resultSql:  "SELECT id, name, create_at FROM categories WHERE name @ $1",
 			resultArgs: []interface{}{"test_name*@"}},
-		{name: "ByNames", byNames: []string{"test_name_1", "test_name_2"},
+		{name: "ByNames", byIds: []string{"test_name_1", "test_name_2"},
 			resultSql:  "SELECT id, name, create_at FROM categories WHERE name IN ($1, $2)",
 			resultArgs: []interface{}{"test_name_1", "test_name_2"}},
 		{name: "ByIdAndName", byId: "test_id", byName: "test_name",
 			resultSql:  "SELECT id, name, create_at FROM categories WHERE name @ $1 AND id = $2",
 			resultArgs: []interface{}{"test_name*@", "test_id"}},
-		{name: "ByIdAndNames", byId: "test_id", byName: "test_name", byNames: []string{"test_name_1", "test_name_2"},
+		{name: "ByIdAndNames", byId: "test_id", byName: "test_name", byIds: []string{"test_name_1", "test_name_2"},
 			resultSql:  "SELECT id, name, create_at FROM categories WHERE name IN ($1, $2) AND id = $3",
 			resultArgs: []interface{}{"test_name_1", "test_name_2", "test_id"}},
 
@@ -51,14 +51,13 @@ func TestRepository_SelectQuery(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query := newSelectQuery(context.Background()).
-				ById(tc.byId).ByName(tc.byName).ByNames(tc.byNames).
+				ById(tc.byId).ByName(tc.byName).ByIds(tc.byIds).
 				FromDate(tc.fromDate).ToDate(tc.toDate).
 				Limit(tc.limit).Offset(tc.offset)
 			if tc.ascendingExists {
 				query = query.Ascending(tc.ascendingValue)
 			}
-			sqlStr, args, err := query.build()
-			assert.NoError(t, err, "building query")
+			sqlStr, args := query.build()
 			assert.Equal(t, tc.resultSql, sqlStr)
 			assert.Equal(t, tc.resultArgs, args)
 		})

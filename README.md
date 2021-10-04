@@ -12,7 +12,7 @@
 
 #### Response
 
-```json lines
+```json
 {
   "error": null,
   "warning": null,
@@ -36,7 +36,7 @@
 ### POST /v1/company
 #### Body
 
-```json lines
+```json
 {
   "name": <string>,
   "building_id": <string>,
@@ -48,7 +48,7 @@
 
 #### Response
 
-```json lines
+```json
 {
   "error": null,
   "warning": null,

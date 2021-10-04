@@ -17,8 +17,13 @@ const (
 )
 
 var (
+	nameGinIndexParam = fmt.Sprintf("string_to_array(lower(%s), '.')", models.NameKey)
+
 	categoryFields = []string{models.IdKey, models.NameKey, models.CreateAt}
-	indexFields    = []string{models.NameKey, models.CreateAt}
+	indexes        = []pg.Index{
+		{TableName: TableName, Field: models.NameKey, Type: pg.GinIndex, Parameter: nameGinIndexParam},
+		{TableName: TableName, Field: models.CreateAt, Type: pg.BtreeIndex},
+	}
 )
 
 type Repository struct {
@@ -47,7 +52,7 @@ func New(conf Config) (r Repository, err error) {
 func (r Repository) createTable() error {
 	s := sql.CreateTable(TableName).IfNotExists().
 		Define(models.IdKey, "uuid", "primary key").
-		Define(models.NameKey, "ltree", fmt.Sprintf("check(%s != '')", models.NameKey), "unique", "not null").
+		Define(models.NameKey, "varchar(300)", fmt.Sprintf("check(%s != '')", models.NameKey), "unique", "not null").
 		Define(models.CreateAt, "bigint", fmt.Sprintf("check(%s > 0)", models.CreateAt), "not null").String()
 	_, err := r.client.Exec(context.Background(), s)
 	if err != nil {
@@ -57,15 +62,10 @@ func (r Repository) createTable() error {
 }
 
 func (r Repository) createIndexes() error {
-	for _, indexField := range indexFields {
-		indexType := "btree"
-		if indexField == models.NameKey {
-			indexType = "gist"
-		}
-		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, TableName, indexType, indexField)
-		_, err := r.client.Exec(context.Background(), sqlStr)
+	for _, idx := range indexes {
+		_, err := r.client.Exec(context.Background(), idx.BuildSql())
 		if err != nil {
-			return fmt.Errorf("create index for field '%s': %v", indexField, err)
+			return fmt.Errorf("create '%s' index for field '%s': %v", idx.Type, idx.Field, err)
 		}
 	}
 	return nil

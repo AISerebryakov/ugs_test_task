@@ -4,26 +4,33 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pretcat/ugc_test_task/models"
+
+	sql "github.com/huandu/go-sqlbuilder"
+	categrepos "github.com/pretcat/ugc_test_task/repositories/categories"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRepository_SelectQuery(t *testing.T) {
 	var testCases = []struct {
-		name         string
-		byId         string
-		byBuildingId string
-		byCategory   string
-		limit        int
-		fromDate     int64
-		toDate       int64
-		withSort     bool
-		resultSql    string
-		resultArgs   []interface{}
+		name            string
+		byId            string
+		byBuildingId    string
+		byCategory      string
+		limit           int
+		offset          int
+		fromDate        int64
+		toDate          int64
+		ascendingExists bool
+		ascendingValue  bool
+		resultSql       string
+		resultArgs      []interface{}
 	}{
 		{name: "ById", byId: "test_id",
 			resultSql:  "SELECT id, name, create_at, building_id, address, phone_numbers, categories FROM companies_full WHERE id = $1",
 			resultArgs: []interface{}{"test_id"}},
-		{name: "ByIdWithLimit", byId: "test_id", limit: 20, withSort: true,
+		{name: "ByIdWithLimit", byId: "test_id", limit: 20, ascendingExists: true, ascendingValue: true,
 			resultSql:  "SELECT id, name, create_at, building_id, address, phone_numbers, categories FROM companies_full WHERE id = $1 ORDER BY create_at ASC LIMIT 20",
 			resultArgs: []interface{}{"test_id"}},
 
@@ -60,14 +67,11 @@ func TestRepository_SelectQuery(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query := newSelectQuery(context.Background()).
-				ById(tc.byId).
-				ByBuildingId(tc.byBuildingId).
-				ByCategory(tc.byCategory).
-				FromDate(tc.fromDate).
-				ToDate(tc.toDate).
-				Limit(tc.limit)
-			if tc.withSort {
-				query = query.WithSort()
+				ById(tc.byId).ByBuildingId(tc.byBuildingId).ByCategories(tc.byCategory).
+				FromDate(tc.fromDate).ToDate(tc.toDate).
+				Limit(tc.limit).Offset(tc.offset)
+			if tc.ascendingExists {
+				query = query.Ascending(tc.ascendingValue)
 			}
 			sqlStr, args, err := query.build()
 			assert.NoError(t, err, "building query")
@@ -76,4 +80,24 @@ func TestRepository_SelectQuery(t *testing.T) {
 		})
 	}
 
+}
+
+func TestSome(t *testing.T) {
+	categoriesArgs := categrepos.PrepareSearchByName("level_1.Level_2")
+	companyIdWithQuery := sql.Select(CompanyIdKey).From(CategoryCompaniesTableName)
+	companyIdWithQuery = companyIdWithQuery.Where(categoryNameGinIndexParam + " @> " + companyIdWithQuery.Var(categoriesArgs))
+
+	categoryNamesWithQuery := sql.Select(CategoryNameKey).From(CategoryCompaniesTableName)
+	categoryNamesWithQuery.Where(CompanyIdKey + " in " + "(select company_id from company_id)")
+
+	companiesQuery := sql.NewSelectBuilder()
+	companiesQuery = companiesQuery.SQL("with company_id AS (" + companiesQuery.Var(companyIdWithQuery) + "),")
+	companiesQuery = companiesQuery.SQL("category_names AS (" + companiesQuery.Var(categoryNamesWithQuery) + ")")
+	fields := append(companyFields, "array((select category_name from category_names)) as categories")
+	companiesQuery = companiesQuery.Select(fields...).From(TableName)
+	companiesQuery = companiesQuery.Where(models.IdKey + " in " + "(select company_id from company_id)")
+
+	sqlStr, args := companiesQuery.BuildWithFlavor(sql.PostgreSQL)
+	t.Log(sqlStr)
+	t.Log(args)
 }

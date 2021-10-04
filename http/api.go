@@ -13,12 +13,15 @@ import (
 )
 
 const (
-	RequestIdKey       = "X-Request-Id"
-	ApplicationJsonKey = "application/json"
-	ContentTypeKey     = "Content-Type"
-	LimitKey           = "limit"
-	OffsetKey          = "offset"
-	AscendingKey       = "ascending"
+	RequestIdKey          = "X-Request-Id"
+	ApplicationJsonKey    = "application/json"
+	ContentTypeKey        = "Content-Type"
+	LimitKey              = "limit"
+	OffsetKey             = "offset"
+	AscendingKey          = "ascending"
+	CategoryKey           = "category"
+	SearchByNameStrictKey = "search_by_name_strict"
+	SearchByNameKey       = "search_by_name"
 
 	maxGettingObjects = 200
 )

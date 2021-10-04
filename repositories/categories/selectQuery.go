@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pretcat/ugc_test_task/repositories"
+
 	"github.com/pretcat/ugc_test_task/logger"
 
 	sql "github.com/huandu/go-sqlbuilder"
@@ -14,18 +16,18 @@ import (
 )
 
 type SelectQuery struct {
-	ctx       context.Context
-	err       error
-	client    pg.Client
-	traceId   string
-	id        string
-	name      string
-	names     []string
-	limit     int
-	offset    int
-	fromDate  int64
-	toDate    int64
-	ascending struct {
+	ctx         context.Context
+	err         error
+	client      pg.Client
+	traceId     string
+	ids         []string
+	name        string
+	getNameMode repositories.Mode
+	limit       int
+	offset      int
+	fromDate    int64
+	toDate      int64
+	ascending   struct {
 		exists bool
 		value  bool
 	}
@@ -40,7 +42,7 @@ func (r Repository) Select(ctx context.Context) *SelectQuery {
 func newSelectQuery(ctx context.Context) *SelectQuery {
 	query := new(SelectQuery)
 	query.ctx = ctx
-	query.names = make([]string, 0)
+	query.ids = make([]string, 0)
 	return query
 }
 
@@ -48,7 +50,17 @@ func (query *SelectQuery) ById(id string) *SelectQuery {
 	if len(id) == 0 || query.err != nil {
 		return query
 	}
-	query.id = id
+	query.ids = query.ids[:0]
+	query.ids = append(query.ids, id)
+	return query
+}
+
+func (query *SelectQuery) ByIds(ids []string) *SelectQuery {
+	if len(ids) == 0 || query.err != nil {
+		return query
+	}
+	query.ids = query.ids[:0]
+	query.ids = append(query.ids, ids...)
 	return query
 }
 
@@ -65,17 +77,16 @@ func (query *SelectQuery) ByName(name string) *SelectQuery {
 		return query
 	}
 	query.name = name
-	query.names = query.names[:0]
+	query.getNameMode = repositories.StrictMode
 	return query
 }
 
-func (query *SelectQuery) ByNames(names []string) *SelectQuery {
-	if len(names) == 0 || query.err != nil {
+func (query *SelectQuery) ByNameWithMode(name string, mode repositories.Mode) *SelectQuery {
+	if len(name) == 0 || query.err != nil {
 		return query
 	}
-	query.name = ""
-	query.names = query.names[:0]
-	query.names = append(query.names, names...)
+	query.name = name
+	query.getNameMode = mode
 	return query
 }
 
@@ -123,10 +134,7 @@ func (query *SelectQuery) Offset(offset int) *SelectQuery {
 func (query SelectQuery) Count() (count int, err error) {
 	query.ascending.exists = false
 	b := sql.Select("count(*)").From(TableName)
-	b, err = query.buildConditions(b)
-	if err != nil {
-		return 0, errors.Wrap(err, "building sql query")
-	}
+	b = query.buildConditions(b)
 	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
 	logger.TraceId(query.traceId).AddMsg("sql for 'Count' query").Debug(sqlStr)
 	logger.TraceId(query.traceId).AddMsg("args for 'Count' query").Debug(fmt.Sprint(args))
@@ -145,15 +153,12 @@ func (query *SelectQuery) One() (models.Category, bool, error) {
 		return models.Category{}, false, query.err
 	}
 	query.Limit(1)
-	sqlStr, args, err := query.build()
-	if err != nil {
-		return models.Category{}, false, errors.Wrap(err, "building sql query")
-	}
+	sqlStr, args := query.build()
 	logger.TraceId(query.traceId).AddMsg("sql for 'One' query").Debug(sqlStr)
 	logger.TraceId(query.traceId).AddMsg("args for 'One' query").Debug(fmt.Sprint(args))
 	row := query.client.QueryRow(query.ctx, sqlStr, args...)
 	category := models.Category{}
-	if err = row.Scan(&category.Id, &category.Name, &category.CreateAt); err != nil {
+	if err := row.Scan(&category.Id, &category.Name, &category.CreateAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Category{}, false, nil
 		}
@@ -167,10 +172,7 @@ func (query *SelectQuery) Iter(callback func(models.Category) error) error {
 	if query.err != nil {
 		return query.err
 	}
-	sqlStr, args, err := query.build()
-	if err != nil {
-		return errors.Wrap(err, "building sql query")
-	}
+	sqlStr, args := query.build()
 	logger.TraceId(query.traceId).AddMsg("sql for 'Iter' query").Debug(sqlStr)
 	logger.TraceId(query.traceId).AddMsg("args for 'Iter' query").Debug(fmt.Sprint(args))
 	rows, err := query.client.Query(query.ctx, sqlStr, args...)
@@ -195,41 +197,43 @@ func (query *SelectQuery) Iter(callback func(models.Category) error) error {
 }
 
 func (query SelectQuery) String() string {
-	sqlStr, _, _ := query.build()
+	sqlStr, _ := query.build()
 	return sqlStr
 }
 
-func (query SelectQuery) build() (_ string, _ []interface{}, err error) {
+func (query SelectQuery) build() (_ string, _ []interface{}) {
 	b := sql.Select(categoryFields...).From(TableName)
-	b, err = query.buildConditions(b)
-	if err != nil {
-		return "", nil, err
-	}
+	b = query.buildConditions(b)
 	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
-	return sqlStr, args, nil
+	return sqlStr, args
 }
 
-func (query SelectQuery) buildConditions(b *sql.SelectBuilder) (*sql.SelectBuilder, error) {
+func (query SelectQuery) buildConditions(b *sql.SelectBuilder) *sql.SelectBuilder {
 	if len(query.name) > 0 {
 		nameArgs := PrepareSearchByName(query.name)
-		if len(nameArgs) == 0 {
-			return nil, errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.NameKey))
+		if query.getNameMode.IsStrict() {
+			b = b.Where(nameGinIndexParam + " @> " + b.Var(nameArgs))
 		}
-		b = b.Where(models.NameKey + " @ " + b.Args.Add(nameArgs))
+		if query.getNameMode.IsFree() {
+			b = b.Where(nameGinIndexParam + " && " + b.Var(nameArgs))
+		}
 	}
-	if len(query.names) > 0 {
-		in := models.NameKey + " IN ("
-		for i, name := range query.names {
-			if i < len(query.names)-1 {
-				in = in + b.Args.Add(name) + ", "
+	if len(query.ids) > 1 {
+		in := models.IdKey + " IN ("
+		for i, id := range query.ids {
+			if i < len(query.ids)-1 {
+				in = in + b.Args.Add(id) + ", "
 				continue
 			}
-			in = in + b.Args.Add(name) + ")"
+			in = in + b.Args.Add(id) + ")"
 		}
 		b = b.Where(in)
 	}
-	if len(query.id) != 0 {
-		b = b.Where(b.Equal(models.IdKey, query.id))
+	if len(query.ids) == 1 {
+		id := query.ids[0]
+		if len(id) > 0 {
+			b = b.Where(b.Equal(models.IdKey, id))
+		}
 	}
 	if query.fromDate > 0 {
 		b = b.Where(b.GE(models.CreateAt, query.fromDate))
@@ -250,5 +254,5 @@ func (query SelectQuery) buildConditions(b *sql.SelectBuilder) (*sql.SelectBuild
 			b = b.OrderBy(models.CreateAt).Desc()
 		}
 	}
-	return b, nil
+	return b
 }

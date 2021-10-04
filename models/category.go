@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/pretcat/ugc_test_task/common"
 )

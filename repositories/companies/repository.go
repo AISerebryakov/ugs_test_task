@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pretcat/ugc_test_task/errors"
+
 	"github.com/pretcat/ugc_test_task/models"
 	"github.com/pretcat/ugc_test_task/pg"
 	buildrepos "github.com/pretcat/ugc_test_task/repositories/buildings"
@@ -25,14 +26,17 @@ var (
 	companyFields         = []string{models.IdKey, models.NameKey, models.CreateAt, models.BuildingIdKey, models.AddressKey, models.PhoneNumbersKey}
 	companyFullFields     = append(companyFields, models.CategoriesKey)
 	companyFullFieldQuery = []string{
-		models.IdKey,
-		models.NameKey,
+		TableName + "." + models.IdKey,
+		TableName + "." + models.NameKey,
 		TableName + "." + models.CreateAt,
-		models.BuildingIdKey,
-		models.AddressKey,
-		models.PhoneNumbersKey,
-		fmt.Sprintf("array_agg(ltree2text(%s.%s)) AS %s", CategoryCompaniesTableName, CategoryNameKey, models.CategoriesKey)}
-	companyIndexFields = []string{models.BuildingIdKey, models.CreateAt}
+		TableName + "." + models.BuildingIdKey,
+		TableName + "." + models.AddressKey,
+		TableName + "." + models.PhoneNumbersKey,
+		fmt.Sprintf("array_agg(%s.%s) AS %s", CategoryCompaniesTableName, CategoryNameKey, models.CategoriesKey)}
+	companyIndexes = []pg.Index{
+		{TableName: TableName, Field: models.BuildingIdKey, Type: pg.HashIndex},
+		{TableName: TableName, Field: models.CreateAt, Type: pg.BtreeIndex},
+	}
 )
 
 type Repository struct {
@@ -71,7 +75,7 @@ func (r Repository) createTables() error {
 }
 
 func (r Repository) createIndexes() error {
-	if err := r.createCompanyIndexes(); err != nil {
+	if err := r.createCompaniesIndexes(); err != nil {
 		return fmt.Errorf("create indexes for table '%s': %v", TableName, err)
 	}
 	if err := r.createCategoryCompaniesIndexes(); err != nil {
@@ -80,16 +84,11 @@ func (r Repository) createIndexes() error {
 	return nil
 }
 
-func (r Repository) createCompanyIndexes() error {
-	for _, indexField := range companyIndexFields {
-		indexType := "btree"
-		if indexField == models.BuildingIdKey {
-			indexType = "hash"
-		}
-		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, TableName, indexType, indexField)
-		_, err := r.client.Exec(context.Background(), sqlStr)
+func (r Repository) createCompaniesIndexes() error {
+	for _, idx := range companyIndexes {
+		_, err := r.client.Exec(context.Background(), idx.BuildSql())
 		if err != nil {
-			return fmt.Errorf("create index for field '%s': %v", indexField, err)
+			return fmt.Errorf("create '%s' index for field '%s': %v", idx.Type, idx.Field, err)
 		}
 	}
 	return nil
@@ -122,62 +121,57 @@ func (r Repository) createCompaniesFullView() error {
 	return nil
 }
 
-func (r Repository) Insert(ctx context.Context, company models.Company) error {
-	if err := company.Validate(); err != nil {
-		return errors.InputParamsIsInvalid.New("'company' is invalid").Add(err.Error())
+func (r Repository) Insert(ctx context.Context, company models.Company, categoryIds []string) (_ models.Company, err error) {
+	if len(categoryIds) == 0 {
+		return models.Company{}, errors.InputParamsIsInvalid.New("'category_ids' is empty")
 	}
-	if len(company.Categories) > 0 {
-		if err := r.insertWithCategories(ctx, company); err != nil {
-			return err
-		}
-		return nil
-	}
-	return r.insert(ctx, nil, company)
-}
-
-func (r Repository) insertWithCategories(ctx context.Context, comp models.Company) error {
-	err := r.client.BeginFunc(ctx, func(tx pgx.Tx) error {
-		if err := r.insert(ctx, tx, comp); err != nil {
-			return err
-		}
-		b := sql.InsertInto(CategoryCompaniesTableName).Cols(categoryCompanyFields...)
-		categoriesIsFound := false
-		err := r.categoryRepos.Select(ctx).ByNames(comp.Categories).Iter(func(category models.Category) error {
-			categoriesIsFound = true
-			b.Values(category.Id, comp.Id, category.Name, comp.CreateAt)
-			return nil
-		})
+	err = r.client.BeginFunc(ctx, func(tx pgx.Tx) error {
+		company, err = r.insertCompany(ctx, tx, company)
 		if err != nil {
-			return fmt.Errorf("fetch categories by names: %v", err)
+			return err
 		}
-		if !categoriesIsFound {
-			return fmt.Errorf("%s: %v: not found", models.CategoriesKey, comp.Categories)
-		}
-		sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
-		if _, err := tx.Exec(ctx, sqlStr, args...); err != nil {
-			return pg.NewError(err)
+		if err = r.insertCategories(ctx, tx, company.Id, categoryIds, company.CreateAt); err != nil {
+			return err
 		}
 		return nil
 	})
+	if err != nil {
+		return models.Company{}, pg.NewError(err)
+	}
+	return company, nil
+}
+
+func (r Repository) insertCategories(ctx context.Context, tx pgx.Tx, companyId string, categoryIds []string, createAt int64) error {
+	sqlStr := `insert into category_companies (category_id, company_id, category_name, create_at) values `
+	args := make([]interface{}, 0, len(categoryIds))
+	var values string
+	var params int
+	for i, categoryId := range categoryIds {
+		values = values + fmt.Sprintf("($%d, $%d, (select name from categories where id = $%d), $%d)", params+1, params+2, params+3, params+4)
+		if i < len(categoryIds)-1 {
+			values = values + ", "
+		}
+		params = params + 4
+		args = append(args, categoryId, companyId, categoryId, createAt)
+	}
+	sqlStr = sqlStr + values
+	_, err := tx.Exec(ctx, sqlStr, args...)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r Repository) insert(ctx context.Context, tx pgx.Tx, comp models.Company) error {
-	sqlStr, args := sql.InsertInto(TableName).Cols(companyFields...).
-		Values(comp.Id, comp.Name, comp.CreateAt, comp.BuildingId, comp.Address, comp.PhoneNumbers).BuildWithFlavor(sql.PostgreSQL)
-	if tx != nil {
-		if _, err := tx.Exec(ctx, sqlStr, args...); err != nil {
-			return err
-		}
-		return nil
+func (r Repository) insertCompany(ctx context.Context, tx pgx.Tx, company models.Company) (models.Company, error) {
+	sqlStr := `insert into companies (id, name, create_at, building_id, address, phone_numbers)
+	values ($1, $2, $3, $4, (select address from buildings where id = $5), $6) returning address`
+	args := []interface{}{company.Id, company.Name, company.CreateAt, company.BuildingId, company.BuildingId, company.PhoneNumbers}
+
+	row := tx.QueryRow(ctx, sqlStr, args...)
+	if err := row.Scan(&company.Address); err != nil {
+		return models.Company{}, err
 	}
-	if _, err := r.client.Exec(ctx, sqlStr, args...); err != nil {
-		return pg.NewError(err)
-	}
-	return nil
+	return company, nil
 }
 
 func (r Repository) DeleteCompanyById(ctx context.Context, id string) (err error) {
