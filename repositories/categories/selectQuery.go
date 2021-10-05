@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pretcat/ugc_test_task/repositories"
-
 	"github.com/pretcat/ugc_test_task/logger"
 
 	sql "github.com/huandu/go-sqlbuilder"
@@ -16,18 +14,17 @@ import (
 )
 
 type SelectQuery struct {
-	ctx         context.Context
-	err         error
-	client      pg.Client
-	traceId     string
-	ids         []string
-	name        string
-	getNameMode repositories.Mode
-	limit       int
-	offset      int
-	fromDate    int64
-	toDate      int64
-	ascending   struct {
+	ctx       context.Context
+	err       error
+	client    pg.Client
+	traceId   string
+	ids       []string
+	name      string
+	limit     int
+	offset    int
+	fromDate  int64
+	toDate    int64
+	ascending struct {
 		exists bool
 		value  bool
 	}
@@ -72,21 +69,11 @@ func (query *SelectQuery) TraceId(id string) *SelectQuery {
 	return query
 }
 
-func (query *SelectQuery) ByName(name string) *SelectQuery {
+func (query *SelectQuery) SearchByName(name string) *SelectQuery {
 	if len(name) == 0 || query.err != nil {
 		return query
 	}
 	query.name = name
-	query.getNameMode = repositories.StrictMode
-	return query
-}
-
-func (query *SelectQuery) ByNameWithMode(name string, mode repositories.Mode) *SelectQuery {
-	if len(name) == 0 || query.err != nil {
-		return query
-	}
-	query.name = name
-	query.getNameMode = mode
 	return query
 }
 
@@ -211,12 +198,7 @@ func (query SelectQuery) build() (_ string, _ []interface{}) {
 func (query SelectQuery) buildConditions(b *sql.SelectBuilder) *sql.SelectBuilder {
 	if len(query.name) > 0 {
 		nameArgs := PrepareSearchByName(query.name)
-		if query.getNameMode.IsStrict() {
-			b = b.Where(nameGinIndexParam + " @> " + b.Var(nameArgs))
-		}
-		if query.getNameMode.IsFree() {
-			b = b.Where(nameGinIndexParam + " && " + b.Var(nameArgs))
-		}
+		b = b.Where(nameGinIndexParam + " && " + b.Var(nameArgs))
 	}
 	if len(query.ids) > 1 {
 		in := models.IdKey + " IN ("

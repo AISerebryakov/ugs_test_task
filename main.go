@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pretcat/ugc_test_task/repositories"
+
 	"github.com/pretcat/ugc_test_task/config"
 	"github.com/pretcat/ugc_test_task/http"
 	"github.com/pretcat/ugc_test_task/logger"
@@ -22,6 +24,8 @@ import (
 
 var (
 	conf config.Config
+
+	pgClient pg.Client
 
 	categoryRepos categrepos.Repository
 	companyRepos  companrepos.Repository
@@ -94,24 +98,30 @@ func initRepositories() (err error) {
 		User:     conf.Pg.User,
 		Password: conf.Pg.Password,
 	}
+	pgClient, err = pg.Connect(context.Background(), pgConfig)
+	if err != nil {
+		return fmt.Errorf("connect to pg database: %v", err)
+	}
 
-	buildingRepos, err = buildrepos.New(buildrepos.NewConfig(pgConfig))
+	repositories.SetClient(pgClient)
+	if err = repositories.CreateDatabase(); err != nil {
+		return fmt.Errorf("create database: %v", err)
+	}
+
+	buildingRepos, err = buildrepos.New(pgClient)
 	if err != nil {
 		return fmt.Errorf("init 'building' repository: %v", err)
 	}
 
-	categoryRepos, err = categrepos.New(categrepos.NewConfig(pgConfig))
+	categoryRepos, err = categrepos.New(pgClient)
 	if err != nil {
 		return fmt.Errorf("init 'category' repository: %v", err)
 	}
 
-	companyConf := companrepos.NewConfig(pgConfig)
-	companyConf.CategoryRepos = categoryRepos
-	companyRepos, err = companrepos.New(companyConf)
+	companyRepos, err = companrepos.New(pgClient, categoryRepos)
 	if err != nil {
 		return fmt.Errorf("init 'company' repository: %v", err)
 	}
-
 	return nil
 }
 
@@ -153,6 +163,9 @@ func shutdownService() {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownServiceTimeout)
 	defer cancel()
 	httpApi.Shutdown(ctx)
+	if err := repositories.Stop(ctx); err != nil {
+		logger.Msg("shutdown shared repository").Error(err.Error())
+	}
 	if err := buildingRepos.Stop(ctx); err != nil {
 		logger.Msg("shutdown 'building' repository").Error(err.Error())
 	}

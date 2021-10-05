@@ -21,7 +21,7 @@ type SelectQuery struct {
 	traceId    string
 	id         string
 	buildingId string
-	categories string
+	category   string
 	limit      int
 	offset     int
 	fromDate   int64
@@ -48,7 +48,7 @@ func (query *SelectQuery) ById(id string) *SelectQuery {
 	if len(id) == 0 || query.err != nil {
 		return query
 	}
-	if len(query.categories) > 0 {
+	if len(query.category) > 0 {
 		query.err = fmt.Errorf("can't use '%s' with '%s'", models.IdKey, models.CategoriesKey)
 		return query
 	}
@@ -68,7 +68,7 @@ func (query *SelectQuery) ByBuildingId(id string) *SelectQuery {
 	if len(id) == 0 || query.err != nil {
 		return query
 	}
-	if len(query.categories) > 0 {
+	if len(query.category) > 0 {
 		query.err = fmt.Errorf("can't use '%s' with '%s'", models.BuildingIdKey, models.CategoriesKey)
 		return query
 	}
@@ -76,15 +76,15 @@ func (query *SelectQuery) ByBuildingId(id string) *SelectQuery {
 	return query
 }
 
-func (query *SelectQuery) ByCategories(categories string) *SelectQuery {
-	if len(categories) == 0 || query.err != nil {
+func (query *SelectQuery) SearchByCategory(category string) *SelectQuery {
+	if len(category) == 0 || query.err != nil {
 		return query
 	}
 	if len(query.id) > 0 || len(query.buildingId) > 0 {
 		query.err = fmt.Errorf("can't use '%s' with '%s' or '%s'", models.CategoriesKey, models.IdKey, models.BuildingIdKey)
 		return query
 	}
-	query.categories = categories
+	query.category = category
 	return query
 }
 
@@ -148,7 +148,6 @@ func (query *SelectQuery) One() (models.Company, bool, error) {
 		}
 		return models.Company{}, false, pg.NewError(err)
 	}
-
 	return company, true, nil
 }
 
@@ -170,7 +169,8 @@ func (query *SelectQuery) Iter(callback func(models.Company) error) error {
 	company := models.Company{}
 	for rows.Next() {
 		company.Reset()
-		if err = rows.Scan(&company.Id, &company.Name, &company.CreateAt, &company.BuildingId, &company.Address, &company.PhoneNumbers, &company.Categories); err != nil {
+		if err = rows.Scan(&company.Id, &company.Name, &company.CreateAt,
+			&company.BuildingId, &company.Address, &company.PhoneNumbers, &company.Categories); err != nil {
 			break
 		}
 		if err = callback(company); err != nil {
@@ -189,10 +189,13 @@ func (query SelectQuery) String() string {
 }
 
 func (query SelectQuery) build() (string, []interface{}, error) {
-	if len(query.categories) > 0 {
+	if len(query.category) > 0 {
 		return query.buildWithCategory()
 	}
-	b := sql.Select(companyFullFields...).From(FullViewName)
+	b := sql.NewSelectBuilder()
+	fields := append(companyFields, "array((select category_name from category_names(id))) as "+models.CategoriesKey)
+
+	b = b.Select(fields...).From(TableName)
 	if len(query.id) != 0 {
 		b = b.Where(b.Equal(models.IdKey, query.id))
 	}
@@ -208,6 +211,9 @@ func (query SelectQuery) build() (string, []interface{}, error) {
 	if query.limit > 0 {
 		b = b.Limit(query.limit)
 	}
+	if query.offset > 0 {
+		b = b.Offset(query.offset)
+	}
 	if query.ascending.exists {
 		if query.ascending.value {
 			b = b.OrderBy(models.CreateAt).Asc()
@@ -219,47 +225,43 @@ func (query SelectQuery) build() (string, []interface{}, error) {
 	return sqlStr, args, nil
 }
 
-//with company_id as (
-//select company_id from category_companies where string_to_array(lower(category_name), '.') @> '{"level_11"}'
-//),
-//category_names as (
-//select category_name from category_companies where company_id in (select company_id from company_id)
-//)
-//select id, name, companies.create_at, building_id, address, phone_numbers, array((select category_name from category_names)) as categories from companies
-//where id in (select company_id from company_id);
-
-func (query SelectQuery) b() {
-	categoriesArgs := categrepos.PrepareSearchByName(query.categories)
-	companyIdWithQuery := sql.Select(CompanyIdKey).From(CategoryCompaniesTableName)
-	companyIdWithQuery = companyIdWithQuery.Where(categoryNameGinIndexParam, "@> "+companyIdWithQuery.Var(categoriesArgs))
-
-}
-
 func (query SelectQuery) buildWithCategory() (string, []interface{}, error) {
-	b := sql.Select(companyFullFieldQuery...).From(CategoryCompaniesTableName)
-	categoriesArgs := categrepos.PrepareSearchByName(query.categories)
+	categoriesArgs := categrepos.PrepareSearchByName(query.category)
 	if len(categoriesArgs) == 0 {
-		return "", nil, errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.NameKey))
+		return "", nil, errors.InputParamsIsInvalid.New(fmt.Sprintf("parameters for search by '%s' is empty", models.CategoriesKey))
 	}
-	b = b.Where(CategoryNameKey+" @ "+b.Args.Add(categoriesArgs)).
-		Join(TableName, TableName+"."+models.IdKey+"="+CategoryCompaniesTableName+"."+CompanyIdKey).
-		GroupBy(TableName + "." + models.IdKey)
+	idWithQuery := sql.Select(CompanyIdKey).From(CategoryCompaniesTableName)
+	idWithQuery = idWithQuery.Where(categoryNameGinIndexParam + " && " + idWithQuery.Var(categoriesArgs)).GroupBy(CompanyIdKey)
+
+	namesWithQuery := sql.Select(CategoryNameKey, CompanyIdKey).From(CategoryCompaniesTableName)
+	namesWithQuery.Where(CompanyIdKey + " in " + "(select company_id from company_id)")
+
+	companiesQuery := sql.NewSelectBuilder()
+	companiesQuery = companiesQuery.SQL("with company_id AS (" + companiesQuery.Var(idWithQuery) + "),")
+	companiesQuery = companiesQuery.SQL("category_names AS (" + companiesQuery.Var(namesWithQuery) + ")")
+	fields := append(companyFields, "array((select category_name from category_names where company_id = id)) as categories")
+	companiesQuery = companiesQuery.Select(fields...).From(TableName)
+	companiesQuery = companiesQuery.Where(models.IdKey + " in " + "(select company_id from company_id)")
+
 	if query.fromDate > 0 {
-		b = b.Where(b.GE(models.CreateAt, query.fromDate))
+		companiesQuery = companiesQuery.Where(companiesQuery.GE(models.CreateAt, query.fromDate))
 	}
 	if query.toDate > 0 {
-		b = b.Where(b.LE(models.CreateAt, query.toDate))
+		companiesQuery = companiesQuery.Where(companiesQuery.LE(models.CreateAt, query.toDate))
 	}
 	if query.limit > 0 {
-		b = b.Limit(query.limit)
+		companiesQuery = companiesQuery.Limit(query.limit)
+	}
+	if query.offset > 0 {
+		companiesQuery = companiesQuery.Offset(query.offset)
 	}
 	if query.ascending.exists {
 		if query.ascending.value {
-			b = b.OrderBy(models.CreateAt).Asc()
+			companiesQuery = companiesQuery.OrderBy(models.CreateAt).Asc()
 		} else {
-			b = b.OrderBy(models.CreateAt).Desc()
+			companiesQuery = companiesQuery.OrderBy(models.CreateAt).Desc()
 		}
 	}
-	sqlStr, args := b.BuildWithFlavor(sql.PostgreSQL)
+	sqlStr, args := companiesQuery.BuildWithFlavor(sql.PostgreSQL)
 	return sqlStr, args, nil
 }

@@ -3,7 +3,6 @@ package categories
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/models"
@@ -30,16 +29,11 @@ type Repository struct {
 	client pg.Client
 }
 
-func New(conf Config) (r Repository, err error) {
-	if err := conf.Validate(); err != nil {
-		return r, fmt.Errorf("config is invalid: %v", err)
+func New(client pg.Client) (r Repository, err error) {
+	if client.IsEmpty() {
+		return Repository{}, fmt.Errorf("pg client is empty")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	r.client, err = pg.Connect(ctx, conf.pgConfig)
-	if err != nil {
-		return Repository{}, err
-	}
+	r.client = client
 	if err := r.createTable(); err != nil {
 		return Repository{}, fmt.Errorf("create '%s' table: %v", TableName, err)
 	}
@@ -88,6 +82,9 @@ func (r Repository) IsEmpty() bool {
 }
 
 func (r Repository) Stop(ctx context.Context) (err error) {
+	if r.client.IsEmpty() {
+		return nil
+	}
 	ch := make(chan bool)
 	defer close(ch)
 	go func() {

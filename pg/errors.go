@@ -1,7 +1,6 @@
 package pg
 
 import (
-	"fmt"
 	"github.com/jackc/pgconn"
 	"github.com/pretcat/ugc_test_task/errors"
 )
@@ -14,10 +13,8 @@ const (
 func NewError(err error) error {
 	pgErr, ok := err.(*pgconn.PgError)
 	if !ok {
-		return nil
+		return err
 	}
-	fmt.Printf("PG ERROR: %#v\n", pgErr)
-	fmt.Println("ERROR: ", pgErr.Error())
 	switch pgErr.Code {
 	case UniqueViolationErrCode:
 		return errors.Duplicate.New("").Add(pgErr.Detail)

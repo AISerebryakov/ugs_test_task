@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/pretcat/ugc_test_task/common"
 )
@@ -14,6 +15,7 @@ type Company struct {
 	Address      string   `json:"address"`
 	PhoneNumbers []string `json:"phone_numbers"`
 	Categories   []string `json:"categories"`
+	CategoryIds  []string `json:"-"`
 }
 
 func NewCompany() Company {

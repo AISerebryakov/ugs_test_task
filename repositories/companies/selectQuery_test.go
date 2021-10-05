@@ -4,10 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pretcat/ugc_test_task/models"
-
-	sql "github.com/huandu/go-sqlbuilder"
-	categrepos "github.com/pretcat/ugc_test_task/repositories/categories"
+	"github.com/pretcat/ugc_test_task/repositories"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -17,17 +14,18 @@ func TestRepository_SelectQuery(t *testing.T) {
 		name            string
 		byId            string
 		byBuildingId    string
-		byCategory      string
+		byCategories    string
 		limit           int
 		offset          int
 		fromDate        int64
 		toDate          int64
+		mode            repositories.Mode
 		ascendingExists bool
 		ascendingValue  bool
 		resultSql       string
 		resultArgs      []interface{}
 	}{
-		{name: "ById", byId: "test_id",
+		{name: "ById", byId: "test_id", offset: 10,
 			resultSql:  "SELECT id, name, create_at, building_id, address, phone_numbers, categories FROM companies_full WHERE id = $1",
 			resultArgs: []interface{}{"test_id"}},
 		{name: "ByIdWithLimit", byId: "test_id", limit: 20, ascendingExists: true, ascendingValue: true,
@@ -51,23 +49,23 @@ func TestRepository_SelectQuery(t *testing.T) {
 			resultSql:  "SELECT id, name, create_at, building_id, address, phone_numbers, categories FROM companies_full WHERE building_id = $1",
 			resultArgs: []interface{}{"test_building_id"}},
 
-		{name: "ByCategories", byCategory: "level_1 level_2",
-			resultSql:  "SELECT id, name, companies.create_at, building_id, address, phone_numbers, array_agg(ltree2text(category_companies.category_name)) AS categories FROM category_companies JOIN companies ON companies.id=category_companies.company_id WHERE category_name @ $1 GROUP BY companies.id",
-			resultArgs: []interface{}{"level_1*@|level_2*@"}},
-		{name: "ByCategoriesAndFromDate", byCategory: "level_1, level_2", fromDate: 7000,
-			resultSql:  "SELECT id, name, companies.create_at, building_id, address, phone_numbers, array_agg(ltree2text(category_companies.category_name)) AS categories FROM category_companies JOIN companies ON companies.id=category_companies.company_id WHERE category_name @ $1 AND create_at >= $2 GROUP BY companies.id",
-			resultArgs: []interface{}{"level_1*@|level_2*@", int64(7000)}},
-		{name: "ByCategoriesAndFromAndToDate", byCategory: "level_1 level_2", fromDate: 7000, toDate: 9000,
-			resultSql:  "SELECT id, name, companies.create_at, building_id, address, phone_numbers, array_agg(ltree2text(category_companies.category_name)) AS categories FROM category_companies JOIN companies ON companies.id=category_companies.company_id WHERE category_name @ $1 AND create_at >= $2 AND create_at <= $3 GROUP BY companies.id",
-			resultArgs: []interface{}{"level_1*@|level_2*@", int64(7000), int64(9000)}},
-		{name: "ByCategoriesWithLimit", byCategory: "level_1 level_2", limit: 20,
-			resultSql:  "SELECT id, name, companies.create_at, building_id, address, phone_numbers, array_agg(ltree2text(category_companies.category_name)) AS categories FROM category_companies JOIN companies ON companies.id=category_companies.company_id WHERE category_name @ $1 GROUP BY companies.id LIMIT 20",
-			resultArgs: []interface{}{"level_1*@|level_2*@"}},
+		{name: "ByCategories", byCategories: "level_1.Level_2", mode: repositories.StrictMode,
+			resultSql:  "with company_id AS (SELECT company_id FROM category_companies WHERE string_to_array(lower(category_name), '.') @> $1 GROUP BY company_id), category_names AS (SELECT category_name, company_id FROM category_companies WHERE company_id in (select company_id from company_id)) SELECT id, name, create_at, building_id, address, phone_numbers, array((select category_name from category_names where company_id = id)) as categories FROM companies WHERE id in (select company_id from company_id)",
+			resultArgs: []interface{}{[]string{"level_1", "level_2"}}},
+		{name: "ByCategoriesAndFromDate", byCategories: "leveL_1.Level_2", fromDate: 7000, mode: repositories.FreeMode,
+			resultSql:  "with company_id AS (SELECT company_id FROM category_companies WHERE string_to_array(lower(category_name), '.') && $1 GROUP BY company_id), category_names AS (SELECT category_name, company_id FROM category_companies WHERE company_id in (select company_id from company_id)) SELECT id, name, create_at, building_id, address, phone_numbers, array((select category_name from category_names where company_id = id)) as categories FROM companies WHERE id in (select company_id from company_id) AND create_at >= $2",
+			resultArgs: []interface{}{[]string{"level_1", "level_2"}, int64(7000)}},
+		{name: "ByCategoriesAndFromAndToDate", byCategories: "level_1.Level_2", fromDate: 7000, toDate: 9000,
+			resultSql:  "with company_id AS (SELECT company_id FROM category_companies WHERE string_to_array(lower(category_name), '.') && $1 GROUP BY company_id), category_names AS (SELECT category_name, company_id FROM category_companies WHERE company_id in (select company_id from company_id)) SELECT id, name, create_at, building_id, address, phone_numbers, array((select category_name from category_names where company_id = id)) as categories FROM companies WHERE id in (select company_id from company_id) AND create_at >= $2 AND create_at <= $3",
+			resultArgs: []interface{}{[]string{"level_1", "level_2"}, int64(7000), int64(9000)}},
+		{name: "ByCategoriesWithLimit", byCategories: "level_1.Level_2", limit: 20,
+			resultSql:  "with company_id AS (SELECT company_id FROM category_companies WHERE string_to_array(lower(category_name), '.') && $1 GROUP BY company_id), category_names AS (SELECT category_name, company_id FROM category_companies WHERE company_id in (select company_id from company_id)) SELECT id, name, create_at, building_id, address, phone_numbers, array((select category_name from category_names where company_id = id)) as categories FROM companies WHERE id in (select company_id from company_id) LIMIT 20",
+			resultArgs: []interface{}{[]string{"level_1", "level_2"}}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			query := newSelectQuery(context.Background()).
-				ById(tc.byId).ByBuildingId(tc.byBuildingId).ByCategories(tc.byCategory).
+				ById(tc.byId).ByBuildingId(tc.byBuildingId).ByCategoryWithMode(tc.byCategories, tc.mode).
 				FromDate(tc.fromDate).ToDate(tc.toDate).
 				Limit(tc.limit).Offset(tc.offset)
 			if tc.ascendingExists {
@@ -80,24 +78,4 @@ func TestRepository_SelectQuery(t *testing.T) {
 		})
 	}
 
-}
-
-func TestSome(t *testing.T) {
-	categoriesArgs := categrepos.PrepareSearchByName("level_1.Level_2")
-	companyIdWithQuery := sql.Select(CompanyIdKey).From(CategoryCompaniesTableName)
-	companyIdWithQuery = companyIdWithQuery.Where(categoryNameGinIndexParam + " @> " + companyIdWithQuery.Var(categoriesArgs))
-
-	categoryNamesWithQuery := sql.Select(CategoryNameKey).From(CategoryCompaniesTableName)
-	categoryNamesWithQuery.Where(CompanyIdKey + " in " + "(select company_id from company_id)")
-
-	companiesQuery := sql.NewSelectBuilder()
-	companiesQuery = companiesQuery.SQL("with company_id AS (" + companiesQuery.Var(companyIdWithQuery) + "),")
-	companiesQuery = companiesQuery.SQL("category_names AS (" + companiesQuery.Var(categoryNamesWithQuery) + ")")
-	fields := append(companyFields, "array((select category_name from category_names)) as categories")
-	companiesQuery = companiesQuery.Select(fields...).From(TableName)
-	companiesQuery = companiesQuery.Where(models.IdKey + " in " + "(select company_id from company_id)")
-
-	sqlStr, args := companiesQuery.BuildWithFlavor(sql.PostgreSQL)
-	t.Log(sqlStr)
-	t.Log(args)
 }

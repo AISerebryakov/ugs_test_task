@@ -8,9 +8,9 @@ import (
 )
 
 type Category struct {
-	Id       string
-	Name     string
-	CreateAt int64
+	Id       string `json:"id"`
+	Name     string `json:"name"`
+	CreateAt int64  `json:"create_at"`
 }
 
 func NewCategory() Category {

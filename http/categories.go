@@ -10,8 +10,13 @@ import (
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/logger"
 	"github.com/pretcat/ugc_test_task/managers"
-	categories2 "github.com/pretcat/ugc_test_task/managers/categories"
+	categmng "github.com/pretcat/ugc_test_task/managers/categories"
 	"github.com/pretcat/ugc_test_task/models"
+)
+
+const (
+	SearchByNameStrictKey = "search_by_name_strict"
+	SearchByNameKey       = "search_by_name"
 )
 
 func (api Api) categoriesHandlers(res *Response, req Request) {
@@ -70,12 +75,11 @@ func (api Api) addCategory(res *Response, req Request) {
 	res.SetData(jsonData)
 }
 
-func newGetCategoriesQuery(req Request) (query categories2.GetQuery) {
+func newGetCategoriesQuery(req Request) (query categmng.GetQuery) {
 	urlQuery := req.URL.Query()
 	query.TraceId = req.Id()
 	query.Id = urlQuery.Get(models.IdKey)
-	query.SetName(urlQuery.Get(SearchByNameKey))
-	query.SetNameStrict(urlQuery.Get(SearchByNameStrictKey))
+	query.Name = urlQuery.Get(SearchByNameKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
 	query.Offset, _ = strconv.Atoi(urlQuery.Get(OffsetKey))
@@ -84,17 +88,17 @@ func newGetCategoriesQuery(req Request) (query categories2.GetQuery) {
 	return query
 }
 
-func newAddCategoryQuery(req Request) (categories2.AddQuery, error) {
+func newAddCategoryQuery(req Request) (categmng.AddQuery, error) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return categories2.AddQuery{}, errors.BodyReadErr.New(err.Error())
+		return categmng.AddQuery{}, errors.BodyReadErr.New(err.Error())
 	}
 	if len(body) == 0 {
-		return categories2.AddQuery{}, errors.BodyIsEmpty.New("")
+		return categmng.AddQuery{}, errors.BodyIsEmpty.New("")
 	}
-	query, err := categories2.NewAddQueryFromJson(body)
+	query, err := categmng.NewAddQueryFromJson(body)
 	if err != nil {
-		return categories2.AddQuery{}, errors.QueryParseErr.New(err.Error())
+		return categmng.AddQuery{}, errors.QueryParseErr.New(err.Error())
 	}
 	query.ReqId = req.Id()
 	return query, nil

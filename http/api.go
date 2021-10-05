@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/pprof"
 
@@ -13,17 +14,15 @@ import (
 )
 
 const (
-	RequestIdKey          = "X-Request-Id"
-	ApplicationJsonKey    = "application/json"
-	ContentTypeKey        = "Content-Type"
-	LimitKey              = "limit"
-	OffsetKey             = "offset"
-	AscendingKey          = "ascending"
-	CategoryKey           = "category"
-	SearchByNameStrictKey = "search_by_name_strict"
-	SearchByNameKey       = "search_by_name"
+	RequestIdKey       = "X-Request-Id"
+	ApplicationJsonKey = "application/json"
+	ContentTypeKey     = "Content-Type"
+	LimitKey           = "limit"
+	OffsetKey          = "offset"
+	AscendingKey       = "ascending"
+	CategoryKey        = "category"
 
-	maxGettingObjects = 200
+	maxGettingObjects = 100
 )
 
 var (
@@ -36,13 +35,15 @@ var (
 )
 
 type Api struct {
-	server        *http.Server
-	debugServer   *http.Server
-	metricsServer *http.Server
-	conf          Config
-	companyMng    CompanyManager
-	buildingMng   BuildingManager
-	categoryMng   CategoryManager
+	server             *http.Server
+	debugServer        *http.Server
+	metricsServer      *http.Server
+	conf               Config
+	companyMng         CompanyManager
+	buildingMng        BuildingManager
+	categoryMng        CategoryManager
+	requestsDuration   *requestsDurationMetric
+	connectionsCounter *connectionsCounterMetric
 }
 
 func NewApi(conf Config) *Api {
@@ -51,6 +52,7 @@ func NewApi(conf Config) *Api {
 	api.companyMng = conf.CompanyManager
 	api.buildingMng = conf.BuildingManager
 	api.categoryMng = conf.CategoryManager
+	api.setupMetrics()
 	return api
 }
 
@@ -94,6 +96,11 @@ func (api *Api) Shutdown(ctx context.Context) {
 		}
 		logger.Info("debug http server shutdown")
 	}
+}
+
+func (api *Api) setupMetrics() {
+	api.requestsDuration = newRequestsDurationMetric()
+	api.connectionsCounter = newConnectionsCounterMetric()
 }
 
 func (api *Api) startServer() error {
@@ -195,4 +202,15 @@ func (api *Api) ServeHTTP(rw http.ResponseWriter, httpReq *http.Request) {
 	}
 	res.writeHeaders()
 	res.WriteBody()
+	api.requestsDuration.write(req, res.statusCode)
+}
+
+func (api *Api) connectionState(conn net.Conn, state http.ConnState) {
+	logger.Debugf("new connection state: %s, ip: %s", state.String(), conn.RemoteAddr().String())
+	switch state {
+	case http.StateNew:
+		api.connectionsCounter.Inc()
+	case http.StateClosed:
+		api.connectionsCounter.Dec()
+	}
 }

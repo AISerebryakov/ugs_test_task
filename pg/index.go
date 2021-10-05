@@ -22,5 +22,5 @@ func (idx Index) BuildSql() string {
 	if len(idx.Parameter) == 0 {
 		idx.Parameter = idx.Field
 	}
-	return fmt.Sprintf("create index if not exists %s_%s_idx on %s using %s(%s)", idx.Field, idx.Type, idx.TableName, idx.Type, idx.Parameter)
+	return fmt.Sprintf("create index if not exists %s_%s_%s_idx on %s using %s(%s)", idx.TableName, idx.Field, idx.Type, idx.TableName, idx.Type, idx.Parameter)
 }

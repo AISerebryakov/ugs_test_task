@@ -15,6 +15,8 @@ const (
 
 	TitleKey = "title"
 	MsgKey   = "msg"
+
+	errorPrefix = "error on "
 )
 
 var (
@@ -50,7 +52,7 @@ func NewIncorrectRequestError(msg string) Error {
 	return Error{
 		httpCode: http.StatusBadRequest,
 		title:    IncorrectRequestTitle,
-		msg:      msg,
+		msg:      errorPrefix + msg,
 	}
 }
 
@@ -58,7 +60,7 @@ func NewInternalServerError(msg string) Error {
 	return Error{
 		httpCode: http.StatusInternalServerError,
 		title:    InternalServerErrorTitle,
-		msg:      msg,
+		msg:      errorPrefix + msg,
 	}
 }
 
@@ -66,7 +68,7 @@ func NewEncodingJsonError(msg string) Error {
 	return Error{
 		httpCode: http.StatusInternalServerError,
 		title:    EncodingJsonErrorTitle,
-		msg:      msg,
+		msg:      errorPrefix + msg,
 	}
 }
 

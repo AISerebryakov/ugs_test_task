@@ -9,8 +9,12 @@ import (
 	"github.com/pretcat/ugc_test_task/errors"
 	"github.com/pretcat/ugc_test_task/logger"
 	"github.com/pretcat/ugc_test_task/managers"
-	"github.com/pretcat/ugc_test_task/managers/companies"
+	compmng "github.com/pretcat/ugc_test_task/managers/companies"
 	"github.com/pretcat/ugc_test_task/models"
+)
+
+const (
+	SearchByCategoryKey = "search_by_category"
 )
 
 func (api Api) companyHandlers(res *Response, req Request) {
@@ -32,8 +36,6 @@ func (api Api) getCompanies(res *Response, req Request) {
 		return nil
 	})
 	if err != nil {
-		//todo: handle error
-		//todo: add details to error
 		res.SetError(NewApiError(err))
 		return
 	}
@@ -71,12 +73,12 @@ func (api Api) addCompany(res *Response, req Request) {
 	res.SetData(jsonData)
 }
 
-func newGetCompaniesQuery(req Request) (query companies.GetQuery) {
+func newGetCompaniesQuery(req Request) (query compmng.GetQuery) {
 	urlQuery := req.URL.Query()
 	query.TraceId = req.Id()
 	query.Id = urlQuery.Get(models.IdKey)
+	query.Category = urlQuery.Get(SearchByCategoryKey)
 	query.BuildingId = urlQuery.Get(models.BuildingIdKey)
-	query.Categories = urlQuery.Get(CategoryKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
 	query.Offset, _ = strconv.Atoi(urlQuery.Get(OffsetKey))
@@ -85,17 +87,17 @@ func newGetCompaniesQuery(req Request) (query companies.GetQuery) {
 	return query
 }
 
-func newAddCompanyQuery(req Request) (companies.AddQuery, error) {
+func newAddCompanyQuery(req Request) (compmng.AddQuery, error) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return companies.AddQuery{}, errors.BodyReadErr.New(err.Error())
+		return compmng.AddQuery{}, errors.BodyReadErr.New(err.Error())
 	}
 	if len(body) == 0 {
-		return companies.AddQuery{}, errors.BodyIsEmpty.New("")
+		return compmng.AddQuery{}, errors.BodyIsEmpty.New("")
 	}
-	query, err := companies.NewAddQueryFromJson(body)
+	query, err := compmng.NewAddQueryFromJson(body)
 	if err != nil {
-		return companies.AddQuery{}, errors.QueryParseErr.New(err.Error())
+		return compmng.AddQuery{}, errors.QueryParseErr.New(err.Error())
 	}
 	return query, nil
 }

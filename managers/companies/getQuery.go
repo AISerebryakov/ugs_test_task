@@ -4,7 +4,7 @@ type GetQuery struct {
 	TraceId    string
 	Id         string
 	BuildingId string
-	Categories string
+	Category   string
 	FromDate   int64
 	ToDate     int64
 	Limit      int

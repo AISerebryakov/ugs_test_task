@@ -38,7 +38,7 @@ func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
 	comp.Name = query.Name
 	comp.BuildingId = query.BuildingId
 	comp.PhoneNumbers = query.PhoneNumbers
-	comp.Categories = query.CategoryIds
+	comp.CategoryIds = query.CategoryIds
 	comp, err := m.companyRepos.Insert(ctx, comp, query.CategoryIds)
 	if err != nil {
 		return models.Company{}, errors.Wrap(err, "insert 'company' to db")
@@ -54,8 +54,8 @@ func (m Manager) GetCompanies(query GetQuery, callback func(models.Company) erro
 		if len(query.BuildingId) > 0 {
 			reposQuery = reposQuery.ByBuildingId(query.BuildingId)
 		}
-		if len(query.Categories) > 0 && len(query.BuildingId) == 0 {
-			reposQuery = reposQuery.ByCategories(query.Categories)
+		if len(query.Category) > 0 && len(query.BuildingId) == 0 {
+			reposQuery = reposQuery.SearchByCategory(query.Category)
 		}
 		reposQuery = reposQuery.Limit(query.Limit).Offset(query.Offset)
 		if query.Ascending.Exists {
