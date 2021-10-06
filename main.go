@@ -126,6 +126,7 @@ func handleOsSignals() {
 	for {
 		<-osSignals
 		shutdownService()
+		break
 	}
 }
 
