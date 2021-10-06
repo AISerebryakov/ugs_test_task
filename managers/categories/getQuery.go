@@ -13,8 +13,3 @@ type GetQuery struct {
 		Value  bool
 	}
 }
-
-//Validate todo: implement
-func (query GetQuery) Validate() error {
-	return nil
-}

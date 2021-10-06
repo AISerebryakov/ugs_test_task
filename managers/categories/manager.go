@@ -2,7 +2,6 @@ package categories
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pretcat/ugc_test_task/errors"
@@ -15,17 +14,12 @@ const (
 )
 
 type Manager struct {
-	conf          Config
 	categoryRepos categrepos.Repository
 }
 
-func New(conf Config) (m Manager, _ error) {
-	if err := conf.Validate(); err != nil {
-		return Manager{}, fmt.Errorf("config is invalid: %v", err)
-	}
-	m.conf = conf
-	m.categoryRepos = conf.CategoryRepos
-	return m, nil
+func New(repos categrepos.Repository) (m Manager) {
+	m.categoryRepos = repos
+	return m
 }
 
 func (m Manager) AddCategory(query AddQuery) (models.Category, error) {

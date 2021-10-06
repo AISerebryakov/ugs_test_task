@@ -28,7 +28,6 @@ func New() (conf Config, _ error) {
 		return Config{}, fmt.Errorf("config is invalid: %v", err)
 	}
 	return conf, nil
-
 }
 func (conf *Config) readFlags() {
 	if conf.isParsedFlags {

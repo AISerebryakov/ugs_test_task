@@ -55,10 +55,7 @@ func main() {
 		logger.Msg("error while init repositories").Error(err.Error())
 		os.Exit(1)
 	}
-	if err := initManagers(); err != nil {
-		logger.Msg("error while init managers").Error(err.Error())
-		os.Exit(1)
-	}
+	initManagers()
 	httpApi = http.NewApi(http.Config{
 		Host:              conf.HttpServer.Host,
 		Port:              conf.HttpServer.Port,
@@ -125,28 +122,10 @@ func initRepositories() (err error) {
 	return nil
 }
 
-func initManagers() (err error) {
-	companyMng, err = companmng.New(companmng.Config{
-		CompanyRepos: companyRepos,
-	})
-	if err != nil {
-		return fmt.Errorf("error while creating company manager: %v", err)
-	}
-
-	buildingMng, err = buildmng.New(buildmng.Config{
-		BuildingRepos: buildingRepos,
-	})
-	if err != nil {
-		return fmt.Errorf("error while creating building manager: %v", err)
-	}
-
-	categoryMng, err = categmng.New(categmng.Config{
-		CategoryRepos: categoryRepos,
-	})
-	if err != nil {
-		return fmt.Errorf("error while creating category manager: %v", err)
-	}
-	return nil
+func initManagers() {
+	companyMng = companmng.New(companyRepos)
+	buildingMng = buildmng.New(buildingRepos)
+	categoryMng = categmng.New(categoryRepos)
 }
 
 func handleOsSignals() {

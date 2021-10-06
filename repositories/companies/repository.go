@@ -17,21 +17,11 @@ import (
 )
 
 const (
-	TableName    = "companies"
-	FullViewName = "companies_full"
+	TableName = "companies"
 )
 
 var (
-	companyFields         = []string{models.IdKey, models.NameKey, models.CreateAt, models.BuildingIdKey, models.AddressKey, models.PhoneNumbersKey}
-	companyFullFields     = append(companyFields, models.CategoriesKey)
-	companyFullFieldQuery = []string{
-		TableName + "." + models.IdKey,
-		TableName + "." + models.NameKey,
-		TableName + "." + models.CreateAt,
-		TableName + "." + models.BuildingIdKey,
-		TableName + "." + models.AddressKey,
-		TableName + "." + models.PhoneNumbersKey,
-		fmt.Sprintf("array_agg(%s.%s) AS %s", CategoryCompaniesTableName, CategoryNameKey, models.CategoriesKey)}
+	companyFields  = []string{models.IdKey, models.NameKey, models.CreateAt, models.BuildingIdKey, models.AddressKey, models.PhoneNumbersKey}
 	companyIndexes = []pg.Index{
 		{TableName: TableName, Field: models.BuildingIdKey, Type: pg.HashIndex},
 		{TableName: TableName, Field: models.CreateAt, Type: pg.BtreeIndex},
@@ -55,6 +45,9 @@ func New(client pg.Client, crepos categrepos.Repository) (r Repository, err erro
 	if err := r.createIndexes(); err != nil {
 		return Repository{}, err
 	}
+	if err := r.createCategoryNamesFunc(); err != nil {
+		return Repository{}, fmt.Errorf("create sql function 'category_names(id uuid)': %v", err)
+	}
 	return r, nil
 }
 
@@ -68,7 +61,17 @@ func (r Repository) createTables() error {
 	return nil
 }
 
-//todo: create functions
+func (r Repository) createCategoryNamesFunc() error {
+	sqlStr := fmt.Sprintf(`
+create or replace function category_names(id uuid) returns table(%s varchar(300)) as $$
+	select %s from %s where %s = id; 
+$$ language sql`, CategoryNameKey, CategoryNameKey, CategoryCompaniesTableName, CompanyIdKey)
+	_, err := r.client.Exec(context.Background(), sqlStr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func (r Repository) createIndexes() error {
 	if err := r.createCompaniesIndexes(); err != nil {

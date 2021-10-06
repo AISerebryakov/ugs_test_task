@@ -58,5 +58,8 @@ func (comp Company) Validate() error {
 	if len(comp.PhoneNumbers) == 0 {
 		return fmt.Errorf("'%s' is empty", PhoneNumbersKey)
 	}
+	if len(comp.Categories) == 0 {
+		return fmt.Errorf("'%s' is empty", CategoriesKey)
+	}
 	return nil
 }

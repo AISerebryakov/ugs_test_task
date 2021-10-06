@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	SearchByNameStrictKey = "search_by_name_strict"
-	SearchByNameKey       = "search_by_name"
+	SearchByNameKey = "search_by_name"
 )
 
 func (api Api) categoriesHandlers(res *Response, req Request) {

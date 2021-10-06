@@ -2,7 +2,6 @@ package buildings
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pretcat/ugc_test_task/errors"
@@ -15,17 +14,12 @@ const (
 )
 
 type Manager struct {
-	conf       Config
 	buildRepos buildrepos.Repository
 }
 
-func New(conf Config) (m Manager, _ error) {
-	if err := conf.Validate(); err != nil {
-		return Manager{}, fmt.Errorf("config is invalid: %v", err)
-	}
-	m.conf = conf
-	m.buildRepos = conf.BuildingRepos
-	return m, nil
+func New(repos buildrepos.Repository) (m Manager) {
+	m.buildRepos = repos
+	return m
 }
 
 func (m Manager) AddBuilding(query AddQuery) (models.Building, error) {

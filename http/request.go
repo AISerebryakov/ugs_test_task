@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pretcat/ugc_test_task/common/random"
+	"github.com/pretcat/ugc_test_task/random"
 )
 
 type Request struct {

@@ -20,7 +20,6 @@ const (
 	LimitKey           = "limit"
 	OffsetKey          = "offset"
 	AscendingKey       = "ascending"
-	CategoryKey        = "category"
 
 	maxGettingObjects = 100
 )

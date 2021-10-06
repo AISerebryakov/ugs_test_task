@@ -2,7 +2,6 @@ package companies
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pretcat/ugc_test_task/errors"
@@ -15,17 +14,12 @@ const (
 )
 
 type Manager struct {
-	conf         Config
 	companyRepos companies.Repository
 }
 
-func New(conf Config) (m Manager, _ error) {
-	if err := conf.Validate(); err != nil {
-		return Manager{}, fmt.Errorf("config is invalid: %v", err)
-	}
-	m.conf = conf
-	m.companyRepos = conf.CompanyRepos
-	return m, nil
+func New(repos companies.Repository) (m Manager) {
+	m.companyRepos = repos
+	return m
 }
 
 func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
