@@ -11,23 +11,29 @@ import (
 )
 
 const (
-	DatabaseName = "usg_test_task"
+	DatabaseName = "ugc_test_task"
 )
 
-var (
-	client pg.Client
-)
-
-var _ = `select oid from pg_database where datname = 'usg_test_task'`
-
-func SetClient(c pg.Client) {
-	client = c
+func InitPgClient(conf pg.Config) (pg.Client, error) {
+	client, err := pg.Connect(context.Background(), conf)
+	if err != nil {
+		return pg.Client{}, err
+	}
+	err = createDatabase(client)
+	if err != nil {
+		return pg.Client{}, fmt.Errorf("create database: %v", err)
+	}
+	client.Close()
+	conf.Database = DatabaseName
+	client, err = pg.Connect(context.Background(), conf)
+	if err != nil {
+		return pg.Client{}, err
+	}
+	return client, nil
 }
 
-var _ = `create database usg_test_task locale 'ru_RU.UTF-8' TEMPLATE template0`
-
-func CreateDatabase() error {
-	ok, err := checkDatabaseExists()
+func createDatabase(client pg.Client) error {
+	ok, err := checkDatabaseExists(client)
 	if err != nil {
 		return fmt.Errorf("check database: %v", err)
 	}
@@ -41,7 +47,7 @@ func CreateDatabase() error {
 	return nil
 }
 
-func checkDatabaseExists() (bool, error) {
+func checkDatabaseExists(client pg.Client) (bool, error) {
 	sqlStr := "select datname from pg_database where datname = '" + DatabaseName + "'"
 	row := client.QueryRow(context.Background(), sqlStr)
 	var name string
@@ -55,22 +61,4 @@ func checkDatabaseExists() (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-func Stop(ctx context.Context) (err error) {
-	if client.IsEmpty() {
-		return nil
-	}
-	ch := make(chan bool)
-	defer close(ch)
-	go func() {
-		client.Close()
-		ch <- true
-	}()
-	select {
-	case <-ch:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 }

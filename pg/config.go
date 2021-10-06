@@ -30,9 +30,6 @@ func (c Config) Validate() error {
 	if len(c.Port) == 0 {
 		return fmt.Errorf("port is empty")
 	}
-	if len(c.Database) == 0 {
-		return fmt.Errorf("database is empty")
-	}
 	if len(c.User) == 0 {
 		return fmt.Errorf("user is empty")
 	}

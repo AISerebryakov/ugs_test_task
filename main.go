@@ -91,30 +91,21 @@ func initRepositories() (err error) {
 	pgConfig := pg.Config{
 		Host:     conf.Pg.Host,
 		Port:     conf.Pg.Port,
-		Database: conf.Pg.DbName,
 		User:     conf.Pg.User,
 		Password: conf.Pg.Password,
 	}
-	pgClient, err = pg.Connect(context.Background(), pgConfig)
+	pgClient, err = repositories.InitPgClient(pgConfig)
 	if err != nil {
-		return fmt.Errorf("connect to pg database: %v", err)
+		return fmt.Errorf("init pg client: %v", err)
 	}
-
-	repositories.SetClient(pgClient)
-	if err = repositories.CreateDatabase(); err != nil {
-		return fmt.Errorf("create database: %v", err)
-	}
-
 	buildingRepos, err = buildrepos.New(pgClient)
 	if err != nil {
 		return fmt.Errorf("init 'building' repository: %v", err)
 	}
-
 	categoryRepos, err = categrepos.New(pgClient)
 	if err != nil {
 		return fmt.Errorf("init 'category' repository: %v", err)
 	}
-
 	companyRepos, err = companrepos.New(pgClient, categoryRepos)
 	if err != nil {
 		return fmt.Errorf("init 'company' repository: %v", err)
@@ -142,9 +133,6 @@ func shutdownService() {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownServiceTimeout)
 	defer cancel()
 	httpApi.Shutdown(ctx)
-	if err := repositories.Stop(ctx); err != nil {
-		logger.Msg("shutdown shared repository").Error(err.Error())
-	}
 	if err := buildingRepos.Stop(ctx); err != nil {
 		logger.Msg("shutdown 'building' repository").Error(err.Error())
 	}
