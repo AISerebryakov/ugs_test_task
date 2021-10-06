@@ -17,7 +17,10 @@ const (
 
 var (
 	buildingsFields = []string{models.IdKey, models.CreateAt, models.AddressKey, models.LocationKey}
-	indexFields     = []string{models.CreateAt, models.AddressKey}
+	indexes         = []pg.Index{
+		{TableName: TableName, Field: models.AddressKey, Type: pg.HashIndex},
+		{TableName: TableName, Field: models.CreateAt, Type: pg.BtreeIndex},
+	}
 )
 
 type Repository struct {
@@ -52,15 +55,10 @@ func (r Repository) createTable() error {
 }
 
 func (r Repository) createIndexes() error {
-	for _, indexField := range indexFields {
-		indexType := "btree"
-		if indexField == models.AddressKey {
-			indexType = "hash"
-		}
-		sqlStr := fmt.Sprintf("create index if not exists %s_idx on %s using %s (%s)", indexField, TableName, indexType, indexField)
-		_, err := r.client.Exec(context.Background(), sqlStr)
+	for _, idx := range indexes {
+		_, err := r.client.Exec(context.Background(), idx.BuildSql())
 		if err != nil {
-			return fmt.Errorf("create index for field '%s': %v", indexField, err)
+			return fmt.Errorf("create '%s' index for field '%s': %v", idx.Type, idx.Field, err)
 		}
 	}
 	return nil
