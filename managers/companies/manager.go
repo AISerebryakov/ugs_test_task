@@ -32,7 +32,6 @@ func (m Manager) AddCompany(query AddQuery) (models.Company, error) {
 	comp.Name = query.Name
 	comp.BuildingId = query.BuildingId
 	comp.PhoneNumbers = query.PhoneNumbers
-	comp.CategoryIds = query.CategoryIds
 	comp, err := m.companyRepos.Insert(ctx, comp, query.CategoryIds)
 	if err != nil {
 		return models.Company{}, errors.Wrap(err, "insert 'company' to db")

@@ -56,6 +56,7 @@ func (api Api) addBuilding(res *Response, req Request) {
 		res.SetError(NewApiError(err))
 		return
 	}
+	logger.TraceId(req.Id()).AddMsg("query").Debugf("%#v", query)
 	building, err := api.buildingMng.AddBuilding(query)
 	if err != nil {
 		res.SetError(NewApiError(err))
@@ -96,6 +97,6 @@ func newAddBuildingQuery(req Request) (buildmng.AddQuery, error) {
 	if err != nil {
 		return buildmng.AddQuery{}, errors.QueryParseErr.New(err.Error())
 	}
-	query.ReqId = req.Id()
+	query.TraceId = req.Id()
 	return query, nil
 }

@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -30,7 +29,7 @@ func (api Api) categoriesHandlers(res *Response, req Request) {
 
 func (api Api) getCategories(res *Response, req Request) {
 	query := newGetCategoriesQuery(req)
-	logger.TraceId(req.Id()).AddMsg("query").Debug(fmt.Sprintf("%#v", query))
+	logger.TraceId(req.Id()).AddMsg("query").Debugf("%#v", query)
 	categories := make([]models.Category, 0)
 	objectCounter := 0
 	err := api.categoryMng.GetCategories(query, func(category models.Category) error {
@@ -59,6 +58,7 @@ func (api Api) addCategory(res *Response, req Request) {
 		res.SetError(NewApiError(err))
 		return
 	}
+	logger.TraceId(req.Id()).AddMsg("query").Debugf("%#v", query)
 	comp, err := api.categoryMng.AddCategory(query)
 	if err != nil {
 		res.SetError(NewApiError(err))
@@ -99,6 +99,6 @@ func newAddCategoryQuery(req Request) (categmng.AddQuery, error) {
 	if err != nil {
 		return categmng.AddQuery{}, errors.QueryParseErr.New(err.Error())
 	}
-	query.ReqId = req.Id()
+	query.TraceId = req.Id()
 	return query, nil
 }

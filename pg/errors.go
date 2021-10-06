@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	UniqueViolationErrCode = "23505"
-	SyntaxErrorCode        = "42601"
+	UniqueViolationErrCode             = "23505"
+	SyntaxErrorCode                    = "42601"
+	InvalidTextRepresentationErrorCode = "22P02"
 )
 
 func NewError(err error) error {
@@ -19,8 +20,10 @@ func NewError(err error) error {
 	case UniqueViolationErrCode:
 		return errors.Duplicate.New("").Add(pgErr.Detail)
 	case SyntaxErrorCode:
-		return errors.InputParamsIsInvalid.New("")
+		return errors.InputParamsIsInvalid.New("").Add(pgErr.Detail)
+	case InvalidTextRepresentationErrorCode:
+		return errors.InputParamsIsInvalid.New("").Add(pgErr.Detail)
 	default:
-		return errors.EmptyType.New("")
+		return errors.EmptyType.New("").Add(pgErr.Detail)
 	}
 }

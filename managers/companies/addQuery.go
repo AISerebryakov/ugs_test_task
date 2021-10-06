@@ -13,6 +13,7 @@ const (
 )
 
 type AddQuery struct {
+	TraceId      string   `json:"-"`
 	Name         string   `json:"name"`
 	BuildingId   string   `json:"building_id"`
 	PhoneNumbers []string `json:"phone_numbers"`

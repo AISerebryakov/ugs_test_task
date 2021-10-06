@@ -164,9 +164,9 @@ func (r Repository) insertCategories(ctx context.Context, tx pgx.Tx, companyId s
 }
 
 func (r Repository) insertCompany(ctx context.Context, tx pgx.Tx, company models.Company) (models.Company, error) {
-	sqlStr := `insert into companies (id, name, create_at, building_id, address, phone_numbers, category_ids)
-	values ($1, $2, $3, $4, (select address from buildings where id = $5), $6, $7) returning address`
-	args := []interface{}{company.Id, company.Name, company.CreateAt, company.BuildingId, company.BuildingId, company.PhoneNumbers, company.CategoryIds}
+	sqlStr := `insert into companies (id, name, create_at, building_id, address, phone_numbers)
+	values ($1, $2, $3, $4, (select address from buildings where id = $5), $6) returning address`
+	args := []interface{}{company.Id, company.Name, company.CreateAt, company.BuildingId, company.BuildingId, company.PhoneNumbers}
 
 	row := tx.QueryRow(ctx, sqlStr, args...)
 	if err := row.Scan(&company.Address); err != nil {

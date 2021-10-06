@@ -3,12 +3,13 @@ package categories
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/pretcat/ugc_test_task/models"
 )
 
 type AddQuery struct {
-	ReqId string `json:"-"`
-	Name  string `json:"name"`
+	TraceId string `json:"-"`
+	Name    string `json:"name"`
 }
 
 func NewAddQueryFromJson(data []byte) (query AddQuery, _ error) {

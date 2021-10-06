@@ -28,6 +28,7 @@ func (api Api) companyHandlers(res *Response, req Request) {
 
 func (api Api) getCompanies(res *Response, req Request) {
 	query := newGetCompaniesQuery(req)
+	logger.TraceId(req.Id()).AddMsg("query").Debugf("%#v", query)
 	companies := make([]models.Company, 0)
 	objectCounter := 0
 	err := api.companyMng.GetCompanies(query, func(company models.Company) error {
@@ -58,6 +59,7 @@ func (api Api) addCompany(res *Response, req Request) {
 		res.SetError(NewApiError(err))
 		return
 	}
+	logger.TraceId(req.Id()).AddMsg("query").Debugf("%#v", query)
 	comp, err := api.companyMng.AddCompany(query)
 	if err != nil {
 		res.SetError(NewApiError(err))
@@ -99,5 +101,6 @@ func newAddCompanyQuery(req Request) (compmng.AddQuery, error) {
 	if err != nil {
 		return compmng.AddQuery{}, errors.QueryParseErr.New(err.Error())
 	}
+	query.TraceId = req.Id()
 	return query, nil
 }

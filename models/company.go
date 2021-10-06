@@ -15,7 +15,6 @@ type Company struct {
 	Address      string   `json:"address"`
 	PhoneNumbers []string `json:"phone_numbers"`
 	Categories   []string `json:"categories"`
-	CategoryIds  []string `json:"-"`
 }
 
 func NewCompany() Company {

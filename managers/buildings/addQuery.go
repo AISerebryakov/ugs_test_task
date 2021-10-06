@@ -3,12 +3,13 @@ package buildings
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/pretcat/ugc_test_task/models"
 )
 
 type AddQuery struct {
-	ReqId    string          `json:"-"`
-	Address  string           `json:"address"`
+	TraceId  string          `json:"-"`
+	Address  string          `json:"address"`
 	Location models.Location `json:"location"`
 }
 
