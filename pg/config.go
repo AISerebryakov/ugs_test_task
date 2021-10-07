@@ -3,14 +3,22 @@ package pg
 import (
 	"fmt"
 	"net/url"
+	"time"
+)
+
+const (
+	defaultRetryTimeout = time.Second
+	maxRetryTimeout     = 10 * time.Second
+	minRetryTimeout     = 400 * time.Millisecond
 )
 
 type Config struct {
-	Host     string
-	Port     string
-	Database string
-	User     string
-	Password string
+	Host         string
+	Port         string
+	Database     string
+	User         string
+	Password     string
+	retryTimeout time.Duration
 }
 
 func (c Config) String() string {
@@ -21,6 +29,26 @@ func (c Config) String() string {
 		Path:   c.Database,
 	}
 	return pgUrl.String()
+}
+
+func (c *Config) SetRetryTimeout(t time.Duration) {
+	if t == 0 {
+		return
+	}
+	if t < minRetryTimeout {
+		t = minRetryTimeout
+	}
+	if t > maxRetryTimeout {
+		t = maxRetryTimeout
+	}
+	c.retryTimeout = t
+}
+
+func (c Config) RetryTimeout() time.Duration {
+	if c.retryTimeout == 0 {
+		return defaultRetryTimeout
+	}
+	return c.retryTimeout
 }
 
 func (c Config) Validate() error {

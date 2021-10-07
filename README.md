@@ -40,11 +40,13 @@
 
 ### Overview
 
+### Errors
+
+### Warnings
+
 ### POST /v1/categories
 
-Запрос для создания новой категории.
-В теле запрос нужно передать `json` который описан ниже.
-В ответ вернётся только что созданный объект `category`.
+Request for create new category.
 
 #### Body
 
@@ -54,9 +56,9 @@
 }
 ```
 
-| Название поля  | Описание |
+| Field  | Description |
 | ------------- | ------------- |
-| `name`  | Название категории. |
+| `name` | Name of category. More [here](#category). |
 
 #### Response
 
@@ -76,22 +78,22 @@
 
 ### GET /v1/categories
 
-Запрос на получение списка категорий.
-Параметры используемые в запросе перечислены ниже.
-
-**TODO: приоритеты**
+Request for get categories.
 
 #### Parameters
 
-| Параметр  | Описание |
+Each parameter have priority. It means that if there is field with high priority, then fields with priority below will be ignored.
+Usually very high priority have `id` field.
+
+| Field  | Description |
 | ------------- | ------------- |
-| `id`  | Уникальный идентификатор компании. |
-| `search_by_name`  | Поиск категорий по названию. Их можно перечислять через пробел либо через точку. Нет чувствительности к регистру. |
-| `from_date` | Поиск по полю `create_at` с условием `create_at >= from_date`. |
-| `to_date` | Поиск по полю `create_at` с условием `create_at <= from_date`. |
-| `offset` | Смещение результата на указанное количество объектов. Лучше использовать это поле вместе с `ascending`. Иначе повторяемость результата не гарантируется.  |
-| `ascending` | Сортировка результата по полю `create_at`. Значение `true` сортирует по возрастанию, `false` по убыванию. Если значение не указано, результат возвращается с не определённой сортировкой. |
-| `limit` | Ограничение количества объектов. |
+| `id`  | Unique category identification. High priority. |
+| `search_by_name` | Search categories by name. They can be listed via dot or space. Insensitive case. Priority below than `id` field.|
+| `from_date` | Search by `create_at` field with condition `create_at >= from_date`. |
+| `to_date` | Search by `create_at` field with condition `create_at <= from_date`. |
+| `offset` | Offset of result. Better use this field with `ascending` field. Otherwise, repeatability of the result is not guaranteed. |
+| `ascending` | Sorting of result by `create_at` field. Value is `true` sorting by ascending, and `false` by descending. If value is not define, then result returning with undefined sorting. |
+| `limit` | Limit of amount objects in result. |
 
 #### Response
 
@@ -111,9 +113,7 @@
 
 ### POST /v1/buildings
 
-Запрос для создания нового здания. 
-В теле запрос нужно передать `json` который описан ниже. 
-В ответ вернётся только что созданный объект `building`. 
+Request for create new building.
 
 #### Body
 
@@ -127,10 +127,10 @@
 }
 ```
 
-| Название поля  | Описание |
+| Field | Description |
 | ------------- | ------------- |
-| `address`  | Адрес нового здания. |
-| `location` | Геогарфические координаты здания. |
+| `address`  | New building address. |
+| `location` | Geographic coordinates for building. More [here](#location). |
 
 #### Response
 
@@ -153,22 +153,23 @@
 
 ### GET /v1/buildings
 
-Запрос на получение списка зданий. 
-Параметры используемые в запросе перечислены ниже.
-
-**TODO: приоритеты**
+Request for get buildings.
 
 #### Parameters
 
-| Параметр  | Описание |
+Each parameter have priority. It means that if there is field with high priority, then fields with priority below will be ignored.
+Usually very high priority have `id` field.
+
+
+| Field  | Description |
 | ------------- | ------------- |
-| `id`  | Уникальный идентификатор компании. |
-| `address`  | Поиск здания по адресу. |
-| `from_date` | Поиск по полю `create_at` с условием `create_at >= from_date`. |
-| `to_date` | Поиск по полю `create_at` с условием `create_at <= from_date`. |
-| `offset` | Смещение результата на указанное количество объектов. Лучше использовать это поле вместе с `ascending`. Иначе повторяемость результата не гарантируется.  |
-| `ascending` | Сортировка результата по полю `create_at`. Значение `true` сортирует по возрастанию, `false` по убыванию. Если значение не указано, результат возвращается с не определённой сортировкой. |
-| `limit` | Ограничение количества объектов. |
+| `id`  | Unique building identification. High priority.|
+| `address`  | Search by address. Priority below than `id` field.|
+| `from_date` | Search by `create_at` field with condition `create_at >= from_date`. |
+| `to_date` | Search by `create_at` field with condition `create_at <= from_date`. |
+| `offset` | Offset of result. Better use this field with `ascending` field. Otherwise, repeatability of the result is not guaranteed. |
+| `ascending` | Sorting of result by `create_at` field. Value is `true` sorting by ascending, and `false` by descending. If value is not define, then result returning with undefined sorting. |
+| `limit` | Limit of amount objects in result. |
 
 #### Response
 
@@ -192,9 +193,7 @@
 
 ### POST /v1/companies
 
-Запрос для создания компании. 
-В теле запроса нужно передать `json` который описан ниже.
-В ответ вернётся только что созданный объект `company`.
+Request for create company.
 
 #### Body
 
@@ -207,12 +206,12 @@
 }
 ```
 
-| Название поля  | Описание |
-| ------------- | ------------- |
-| `name`  | Название для новой компании. |
-| `building_id`  | Идентификатор здания в котором будет находиться комапания. |
-| `phone_numbers` | Список номеров телефонов которые относятся к компании. |
-| `category_ids` | Список идентификаторов категорий к которым относится компания. |
+| Field  | Description |
+| ----------| ------------- |
+| `name` | New company name. |
+| `building_id`  | Unique building identification in which the company is located. |
+| `phone_numbers` | List of company phone numbers. |
+| `category_ids` | List of category ids for the company. |
 
 #### Response
 
@@ -234,23 +233,25 @@
 
 ### GET /v1/companies
 
-Запрос на получение списка компаний. 
-Параметры используемые в запросе перечислены ниже.
-
-**TODO: приоритеты**
+Request for get companies.
 
 #### Parameters
 
-| Параметр  | Описание |
+Each parameter have priority. It means that if there is field with high priority, then fields with priority below will be ignored.
+Usually very high priority have `id` field.
+
+
+| Field  | Description |
 | ------------- | ------------- |
-| `id`  | Уникальный идентификатор компании. |
-| `building_id`  | Идентификатор здания в котором находится комапания. |
-| `search_by_category` | Поиск компании по названию категории. Категории можно перечислять через пробел либо через точку. Нет чувствительности к регистру. |
-| `from_date` | Поиск по полю `create_at` с условием `create_at >= from_date`. |
-| `to_date` | Поиск по полю `create_at` с условием `create_at <= from_date`. |
-| `offset` | Смещение результата на указанное количество объектов. Лучше использовать это поле вместе с `ascending`. Иначе повторяемость результата не гарантируется.  |
-| `ascending` | Сортировка результата по полю `create_at`. Значение `true` сортирует по возрастанию, `false` по убыванию. Если значение не указано, результат возвращается с не определённой сортировкой. |
-| `limit` | Ограничение количества объектов. |
+| `id`  | Unique company identification. High priority.|
+| `building_id`  | Unique building identification in which the company is located. Priority below than `id`, `search_by_category` fields.|
+| `search_by_category` | Search by category name. They can be listed via dot or space. Insensitive case. Priority below than `id` field.|
+| `from_date` | Search by `create_at` field with condition `create_at >= from_date`. |
+| `to_date` | Search by `create_at` field with condition `create_at <= from_date`. |
+| `offset` | Offset of result. Better use this field with `ascending` field. Otherwise, repeatability of the result is not guaranteed. |
+| `ascending` | Sorting of result by `create_at` field. Value is `true` sorting by ascending, and `false` by descending. If value is not define, then result returning with undefined sorting. |
+| `limit` | Limit of amount objects in result. |
+
 
 #### Response
 

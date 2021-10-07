@@ -79,9 +79,9 @@ func newGetBuildingsQuery(req Request) (query buildmng.GetQuery) {
 	query.Address = urlQuery.Get(models.AddressKey)
 	query.FromDate, _ = strconv.ParseInt(urlQuery.Get(managers.FromDateKey), 10, 0)
 	query.ToDate, _ = strconv.ParseInt(urlQuery.Get(managers.ToDateKey), 10, 0)
-	query.Offset, _ = strconv.Atoi(urlQuery.Get(OffsetKey))
-	query.Ascending.Exists, query.Ascending.Value = parseAscending(urlQuery)
 	query.Limit = parseLimit(urlQuery)
+	query.Offset = parseOffset(urlQuery)
+	query.Ascending.Exists, query.Ascending.Value = parseAscending(urlQuery)
 	return query
 }
 

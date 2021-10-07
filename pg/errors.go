@@ -9,6 +9,7 @@ const (
 	UniqueViolationErrCode             = "23505"
 	SyntaxErrorCode                    = "42601"
 	InvalidTextRepresentationErrorCode = "22P02"
+	ConnectionFailureErrorCode         = "08006"
 )
 
 func NewError(err error) error {

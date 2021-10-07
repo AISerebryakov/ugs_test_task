@@ -196,7 +196,7 @@ func (query SelectQuery) build() (_ string, _ []interface{}) {
 }
 
 func (query SelectQuery) buildConditions(b *sql.SelectBuilder) *sql.SelectBuilder {
-	if len(query.name) > 0 {
+	if len(query.name) > 0 && len(query.ids) == 0 {
 		nameArgs := PrepareSearchByName(query.name)
 		b = b.Where(nameGinIndexParam + " && " + b.Var(nameArgs))
 	}

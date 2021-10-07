@@ -5,12 +5,29 @@ import (
 	"strconv"
 )
 
+const (
+	LimitKey     = "limit"
+	OffsetKey    = "offset"
+	AscendingKey = "ascending"
+
+	maxGettingObjects = 100
+	maxOffset         = 1000
+)
+
 func parseLimit(query url.Values) int {
 	limit, _ := strconv.Atoi(query.Get(LimitKey))
 	if limit > maxGettingObjects || limit == 0 {
 		limit = maxGettingObjects
 	}
 	return limit
+}
+
+func parseOffset(query url.Values) int {
+	offset, _ := strconv.Atoi(query.Get(OffsetKey))
+	if offset > maxOffset || offset == 0 {
+		offset = maxOffset
+	}
+	return offset
 }
 
 func parseAscending(query url.Values) (exist, value bool) {

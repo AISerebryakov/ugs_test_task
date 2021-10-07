@@ -17,11 +17,6 @@ const (
 	RequestIdKey       = "X-Request-Id"
 	ApplicationJsonKey = "application/json"
 	ContentTypeKey     = "Content-Type"
-	LimitKey           = "limit"
-	OffsetKey          = "offset"
-	AscendingKey       = "ascending"
-
-	maxGettingObjects = 100
 )
 
 var (

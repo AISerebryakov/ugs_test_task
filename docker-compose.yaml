@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+ app:
+   image: ugc_test_task
+   container_name: ugc_test_task
+   ports:
+     - "8000:8000"
+     - "8001:8001"
+     - "8003:8003"
+   environment:
+    UGS_TEST_HTTP_HOST: 0.0.0.0
+    UGS_TEST_LOGGER_LVL: debug
+    UGS_TEST_PG_HOST: pg
+    UGS_TEST_PG_PASSWORD: 7823
+   depends_on:
+     - pg
+ pg:
+   image: ugc_test_task_pg
+   container_name: postgres

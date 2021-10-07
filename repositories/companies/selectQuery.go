@@ -189,7 +189,7 @@ func (query SelectQuery) String() string {
 }
 
 func (query SelectQuery) build() (string, []interface{}, error) {
-	if len(query.category) > 0 {
+	if len(query.category) > 0 && len(query.id) == 0 {
 		return query.buildWithCategory()
 	}
 	b := sql.NewSelectBuilder()
