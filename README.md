@@ -1,4 +1,47 @@
+- [Start docker compose](#start-docker-compose)
+- [Import Postman config](#import-postman-config)
+- [Entities](#entities)
+  - [Building](#building)
+  - [Location](#location)
+  - [Category](#category)
+  - [Company](#company)
+- [Http api](#http-api)
+  - [Constrains](#constraints)
+  - [Error](#error)
+  - [Warning](#warning)
+  - [Endpoints](#endpoints)
+    - [POST /v1/categories](#post-v1categories)
+    - [GET /v1/categories](#get-v1categories)
+    - [POST /v1/buildings](#post-v1buildings)
+    - [GET /v1/categories](#get-v1buildings)
+    - [POST /v1/companies](#post-v1companies)
+    - [GET /v1/categories](#get-v1companies)
+
+## Start docker-compose
+
+For start docker-compose need from root directory of this repository call:
+```bash 
+  docker-compose up
+```
+
+For finish call:
+
+```bash 
+  docker-compose down
+```
+
+At start docker-compose need some time for initialize db. 
+
+## Import Postman config
+
+For the api test, I suggest using Postman. 
+For this need import [Postman config](UGC%20Test%20Task.postman_collection.json) to desktop application.
+
 ## Entities
+
+ER Diagram of entities.
+
+![ER Diagram](erd.png)
 
 ### Building
 
@@ -38,11 +81,68 @@
 
 ## HTTP API
 
-### Overview
+For creating objects use POST method but for getting GET.
+For POST requests parameters sending as json object in request body. For GET requests as url parameters.
 
-### Errors
+In reply on each request comes json object with fields `error`, `warning`, `data`. 
+The `data` field can contain one object or an array of objects. It depends on the result. 
+For example to fetch a list of companies this will be an array.
 
-### Warnings
+Available ports:
+
+* 8000 - main port for api.
+* 8001 - debug port for pprof and Statviz.
+* 8003 - port for metrics.
+
+### Constraints
+
+* limit - max 100 objects. 
+* offset - max 1000 objects.
+
+### Error
+
+| Field | Type | Description |
+| ------------- | --- | ------------- |
+| `title` | `string` | `title` contain type of the error. |
+| `msg` | `string` | `msg` contain description of the error. |
+
+Example in response:
+
+```json
+{
+  "error": {
+    "title": "encoding_json_error",
+    "msg": "error on encoding response to json"
+  },
+  "warning": null,
+  "data": null
+}
+```
+
+### Warning
+
+The warning indicate that request executed with some kind of constraints. 
+The most common that `objects_limit_exceeded`. It indicates that in response returned max amount objects.
+
+| Field | Type | Description |
+| ------------- | --- | ------------- |
+| `title` | `string` | `title` contain type of the warning. |
+| `msg` | `string` | `msg` contain description of the warning. |
+
+Example in response:
+
+```json
+{
+  "warning": {
+    "title": "objects_limit_exceeded",
+    "msg": "limit: 100 objects"
+  },
+  "error": null,
+  "data": ["..."]
+}
+```
+
+## Endpoints
 
 ### POST /v1/categories
 

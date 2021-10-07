@@ -1,0 +1,296 @@
+{
+	"info": {
+		"_postman_id": "1a2bdc6a-7b4a-4992-bd21-66e093e5ca09",
+		"name": "UGC Test Task",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "GET /v1/categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/v1/categories?ascending=true&from_date=1633512171346&to_date=1633512171362",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"categories"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1b5a5c46-e20e-4d00-829b-d3a82a53c6f2",
+									"disabled": true
+								},
+								{
+									"key": "search_by_name",
+									"value": "tjn",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "4",
+									"disabled": true
+								},
+								{
+									"key": "offset",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "ascending",
+									"value": "true"
+								},
+								{
+									"key": "from_date",
+									"value": "1633512171346"
+								},
+								{
+									"key": "to_date",
+									"value": "1633512171362"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST /v1/categories",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Transport.Moto\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/v1/categories",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"categories"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Companies",
+			"item": [
+				{
+					"name": "GET /v1/companies",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/v1/companies?ascending=true&from_date=1633599518751&to_date=1633599518813",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"companies"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "c63cac68-4b48-4f2c-998c-c5d6818c8fb1",
+									"disabled": true
+								},
+								{
+									"key": "building_id",
+									"value": "41e4cf23-5058-4e7d-bbaa-f7f4b7d8bd97",
+									"disabled": true
+								},
+								{
+									"key": "search_by_category",
+									"value": "Uapix",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "3",
+									"disabled": true
+								},
+								{
+									"key": "ascending",
+									"value": "true"
+								},
+								{
+									"key": "offset",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "from_date",
+									"value": "1633599518751"
+								},
+								{
+									"key": "to_date",
+									"value": "1633599518813"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST /v1/companies",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Company_3\",\n    \"building_id\": \"842d82c4-85dc-4fd0-a721-fd66b5b38a2b\",\n    \"phone_numbers\": [\"+79478234788\"],\n    \"category_ids\": [\"4b468347-0080-4b35-bb13-3c405beddb05\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/v1/companies",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"companies"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Buildings",
+			"item": [
+				{
+					"name": "GET /v1/buildings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/v1/buildings?from_date=1633511246983",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"buildings"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "41e4cf23-5058-4e7d-bbaa-f7f4b7d8bd97",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "5",
+									"disabled": true
+								},
+								{
+									"key": "from_date",
+									"value": "1633511246983"
+								},
+								{
+									"key": "to_date",
+									"value": "1633511247017",
+									"disabled": true
+								},
+								{
+									"key": "ascending",
+									"value": "true",
+									"disabled": true
+								},
+								{
+									"key": "offset",
+									"value": "2",
+									"disabled": true
+								},
+								{
+									"key": "address",
+									"value": "Address_jGtlBIhBAt,122565",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "GET /metrics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8003/metrics",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8003",
+					"path": [
+						"metrics"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "localhost",
+			"value": "http://localhost:8000"
+		}
+	]
+}

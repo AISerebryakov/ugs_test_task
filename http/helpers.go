@@ -24,7 +24,7 @@ func parseLimit(query url.Values) int {
 
 func parseOffset(query url.Values) int {
 	offset, _ := strconv.Atoi(query.Get(OffsetKey))
-	if offset > maxOffset || offset == 0 {
+	if offset > maxOffset {
 		offset = maxOffset
 	}
 	return offset

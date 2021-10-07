@@ -1,7 +1,7 @@
 version: "3.9"
 services:
  app:
-   image: ugc_test_task
+   image: 1puam9zosihqq7osvep8/ugc_test_service
    container_name: ugc_test_task
    ports:
      - "8000:8000"
@@ -15,5 +15,5 @@ services:
    depends_on:
      - pg
  pg:
-   image: ugc_test_task_pg
+   image: 1puam9zosihqq7osvep8/ugc_test_pg
    container_name: postgres
